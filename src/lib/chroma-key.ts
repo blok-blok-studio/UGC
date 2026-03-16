@@ -1,14 +1,19 @@
 /**
  * Client-side chroma key compositing.
  * Overlays a green-screen video onto a background video using Canvas API.
+ * Uses frame-by-frame seeking for reliability + mp4-muxer for proper MP4 output.
  */
+
+import { Muxer, ArrayBufferTarget } from "mp4-muxer";
+
+const FPS = 30;
 
 export async function chromaKeyComposite(
   bgVideoUrl: string,
   gsVideoUrl: string,
   onProgress?: (pct: number) => void,
 ): Promise<File> {
-  // Load both videos
+  // Load both videos as blobs (avoids CORS)
   const [bgVideo, gsVideo] = await Promise.all([
     loadVideo(bgVideoUrl),
     loadVideo(gsVideoUrl),
@@ -16,8 +21,12 @@ export async function chromaKeyComposite(
 
   // Use background video dimensions, scale to max 720p
   const scale = Math.min(1, 720 / Math.max(bgVideo.videoWidth, bgVideo.videoHeight));
-  const width = Math.round(bgVideo.videoWidth * scale) & ~1; // ensure even
+  const width = Math.round(bgVideo.videoWidth * scale) & ~1;
   const height = Math.round(bgVideo.videoHeight * scale) & ~1;
+
+  // Use shorter video duration
+  const duration = Math.min(bgVideo.duration, gsVideo.duration);
+  const totalFrames = Math.floor(duration * FPS);
 
   // Main canvas for composited output
   const canvas = document.createElement("canvas");
@@ -31,98 +40,104 @@ export async function chromaKeyComposite(
   gsCanvas.height = height;
   const gsCtx = gsCanvas.getContext("2d", { willReadFrequently: true })!;
 
-  // Set up MediaRecorder
-  const stream = canvas.captureStream(30);
-  // Prefer MP4 (H.264) for universal playback, fallback to WebM
-  const mimeType = MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
-    ? "video/mp4;codecs=avc1"
-    : MediaRecorder.isTypeSupported("video/mp4")
-      ? "video/mp4"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-        ? "video/webm;codecs=vp8"
-        : "video/webm";
-  const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-  const done = new Promise<File>((resolve, reject) => {
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      resolve(new File([blob], `composite.${ext}`, { type: mimeType }));
-    };
-    recorder.onerror = () => reject(new Error("Recording failed"));
+  // Set up MP4 muxer with WebCodecs VideoEncoder
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: {
+      codec: "avc",
+      width,
+      height,
+    },
+    fastStart: "in-memory",
   });
 
-  recorder.start();
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta ?? undefined),
+    error: (e) => console.error("VideoEncoder error:", e),
+  });
 
-  // Use shorter video duration as the composite length
-  const duration = Math.min(bgVideo.duration, gsVideo.duration);
+  encoder.configure({
+    codec: "avc1.640028", // H.264 High Profile
+    width,
+    height,
+    bitrate: 4_000_000,
+    framerate: FPS,
+  });
 
-  // Play both videos
-  bgVideo.currentTime = 0;
-  gsVideo.currentTime = 0;
-  bgVideo.muted = true;
-  gsVideo.muted = true;
+  // Process frame by frame using seeking
+  for (let frame = 0; frame < totalFrames; frame++) {
+    const time = frame / FPS;
 
-  await Promise.all([
-    new Promise<void>((r) => { bgVideo.oncanplay = () => r(); }),
-    new Promise<void>((r) => { gsVideo.oncanplay = () => r(); }),
-  ]);
+    // Seek both videos to the same timestamp
+    await Promise.all([
+      seekTo(bgVideo, time),
+      seekTo(gsVideo, time),
+    ]);
 
-  bgVideo.play();
-  gsVideo.play();
+    // Draw background frame
+    ctx.drawImage(bgVideo, 0, 0, width, height);
 
-  // Render loop
-  await new Promise<void>((resolve) => {
-    function renderFrame() {
-      if (bgVideo.ended || gsVideo.ended || bgVideo.currentTime >= duration) {
-        recorder.stop();
-        resolve();
-        return;
+    // Draw green screen to offscreen canvas and chroma key it
+    gsCtx.drawImage(gsVideo, 0, 0, width, height);
+    const imageData = gsCtx.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+
+      // Green detection
+      if (g > 120 && r < 150 && b < 150 && g > r * 1.2 && g > b * 1.2) {
+        pixels[i + 3] = 0; // fully transparent
+      } else if (g > 100 && r < 180 && b < 180 && g > r && g > b) {
+        const greenness = (g - Math.max(r, b)) / g;
+        pixels[i + 3] = Math.round(255 * (1 - greenness));
       }
-
-      // Draw background
-      ctx.drawImage(bgVideo, 0, 0, width, height);
-
-      // Draw green screen to offscreen canvas
-      gsCtx.drawImage(gsVideo, 0, 0, width, height);
-      const imageData = gsCtx.getImageData(0, 0, width, height);
-      const pixels = imageData.data;
-
-      // Chroma key: replace green pixels with transparency
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-
-        // Green detection: high green, relatively low red and blue
-        if (g > 120 && r < 150 && b < 150 && g > r * 1.2 && g > b * 1.2) {
-          pixels[i + 3] = 0; // fully transparent
-        } else if (g > 100 && r < 180 && b < 180 && g > r && g > b) {
-          // Edge softening for semi-green pixels
-          const greenness = (g - Math.max(r, b)) / g;
-          pixels[i + 3] = Math.round(255 * (1 - greenness));
-        }
-      }
-
-      gsCtx.putImageData(imageData, 0, 0);
-
-      // Composite green screen onto background
-      ctx.drawImage(gsCanvas, 0, 0);
-
-      // Report progress
-      if (duration > 0) {
-        onProgress?.(Math.round((bgVideo.currentTime / duration) * 100));
-      }
-
-      requestAnimationFrame(renderFrame);
     }
 
-    requestAnimationFrame(renderFrame);
-  });
+    gsCtx.putImageData(imageData, 0, 0);
 
-  return done;
+    // Composite green screen onto background
+    ctx.drawImage(gsCanvas, 0, 0);
+
+    // Encode the composited frame
+    const videoFrame = new VideoFrame(canvas, {
+      timestamp: frame * (1_000_000 / FPS), // microseconds
+      duration: 1_000_000 / FPS,
+    });
+    const isKeyFrame = frame % (FPS * 2) === 0; // keyframe every 2 seconds
+    encoder.encode(videoFrame, { keyFrame: isKeyFrame });
+    videoFrame.close();
+
+    // Report progress
+    onProgress?.(Math.round(((frame + 1) / totalFrames) * 100));
+
+    // Yield to UI thread every 5 frames
+    if (frame % 5 === 0) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+
+  // Flush encoder and finalize MP4
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+
+  const buffer = (muxer.target as ArrayBufferTarget).buffer;
+  const blob = new Blob([buffer], { type: "video/mp4" });
+  return new File([blob], "composite.mp4", { type: "video/mp4" });
+}
+
+function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (Math.abs(video.currentTime - time) < 0.01) {
+      resolve();
+      return;
+    }
+    video.onseeked = () => resolve();
+    video.currentTime = time;
+  });
 }
 
 async function loadVideo(url: string): Promise<HTMLVideoElement> {
