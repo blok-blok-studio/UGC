@@ -45,7 +45,7 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
     },
     {
       label: "Character Swap",
-      description: "Video + Character → Composite Video",
+      description: "Video + Character → Video",
       nodes: [
         {
           id: `videoNode-${ts()}`,
@@ -56,25 +56,19 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
         {
           id: `imageNode-${ts()}`,
           type: "imageNode",
-          position: { x: 50, y: 400 },
+          position: { x: 50, y: 350 },
           data: { label: "Character Image", category: "input", status: "idle" } as never,
         },
         {
           id: `characterSwapNode-${ts()}`,
           type: "characterSwapNode",
-          position: { x: 400, y: 250 },
-          data: { label: "Character Swap", category: "processor", status: "idle", orientation: "image", removeBg: true } as never,
-        },
-        {
-          id: `compositeNode-${ts()}`,
-          type: "compositeNode",
-          position: { x: 750, y: 150 },
-          data: { label: "Composite", category: "processor", status: "idle" } as never,
+          position: { x: 400, y: 200 },
+          data: { label: "Character Swap", category: "processor", status: "idle", orientation: "video" } as never,
         },
         {
           id: `outputNode-${ts()}`,
           type: "outputNode",
-          position: { x: 1100, y: 150 },
+          position: { x: 750, y: 200 },
           data: { label: "Output", category: "output", status: "idle" } as never,
         },
       ],
@@ -119,9 +113,7 @@ const WORKFLOW_WIRING: Record<string, [string, string, string, string][]> = {
   "Character Swap": [
     ["videoNode", "video", "characterSwapNode", "reference_video"],
     ["imageNode", "image", "characterSwapNode", "character_image"],
-    ["videoNode", "video", "compositeNode", "background_video"],
-    ["characterSwapNode", "video", "compositeNode", "greenscreen_video"],
-    ["compositeNode", "video", "outputNode", "media"],
+    ["characterSwapNode", "video", "outputNode", "media"],
   ],
   "Text to UGC": [
     ["promptNode", "prompt", "textToVideoNode", "prompt"],

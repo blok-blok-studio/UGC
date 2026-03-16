@@ -47,47 +47,23 @@ export default function CharacterSwapNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Transferring motion..." } as Partial<CharacterSwapNodeData>);
 
     try {
-      // Step 1: Generate motion transfer
-      const motionResult = await generate(
+      const result = await generate(
         "fal-ai/kling-video/v2.6/pro/motion-control",
         {
           video_url: videoUrl,
           image_url: imageUrl,
-          character_orientation: data.orientation || "image",
+          character_orientation: data.orientation || "video",
         },
         props.id,
-        (status) => updateNodeData(props.id, { progressText: `Step 1/2: ${status}` } as Partial<CharacterSwapNodeData>),
+        (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
       );
 
-      // Step 2: Remove background if enabled
-      if (data.removeBg !== false) {
-        updateNodeData(props.id, { progressText: "Step 2/2: Removing background..." } as Partial<CharacterSwapNodeData>);
-
-        const bgResult = await generate(
-          "bria/video/background-removal",
-          {
-            video_url: motionResult.resultUrl,
-            background_color: "Green",
-            output_container_and_codec: "mp4_h264",
-          },
-          props.id,
-          (status) => updateNodeData(props.id, { progressText: `Step 2/2: ${status}` } as Partial<CharacterSwapNodeData>),
-        );
-
-        updateNodeData(props.id, {
-          status: "complete",
-          resultUrl: bgResult.resultUrl,
-          progressText: undefined,
-        } as Partial<CharacterSwapNodeData>);
-        setPreview(bgResult.resultUrl, "video");
-      } else {
-        updateNodeData(props.id, {
-          status: "complete",
-          resultUrl: motionResult.resultUrl,
-          progressText: undefined,
-        } as Partial<CharacterSwapNodeData>);
-        setPreview(motionResult.resultUrl, motionResult.resultType);
-      }
+      updateNodeData(props.id, {
+        status: "complete",
+        resultUrl: result.resultUrl,
+        progressText: undefined,
+      } as Partial<CharacterSwapNodeData>);
+      setPreview(result.resultUrl, "video");
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",
@@ -95,7 +71,7 @@ export default function CharacterSwapNode(props: NodeProps) {
         progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
     }
-  }, [props.id, data.orientation, data.removeBg, updateNodeData, getConnectedInputs, setPreview]);
+  }, [props.id, data.orientation, updateNodeData, getConnectedInputs, setPreview]);
 
   return (
     <BaseNode
@@ -108,7 +84,7 @@ export default function CharacterSwapNode(props: NodeProps) {
     >
       <div className="space-y-2">
         <p className="text-[10px] text-gray-500">
-          Your movements → Character&apos;s body
+          Character copies your movements in your scene
         </p>
 
         {/* Orientation toggle */}
@@ -118,26 +94,15 @@ export default function CharacterSwapNode(props: NodeProps) {
               key={opt}
               onClick={() => updateNodeData(props.id, { orientation: opt } as Partial<CharacterSwapNodeData>)}
               className={`text-[10px] px-2 py-0.5 rounded border flex-1 ${
-                (data.orientation || "image") === opt
+                (data.orientation || "video") === opt
                   ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
                   : "border-canvas-border text-gray-500"
               }`}
             >
-              {opt === "video" ? "Video Orient." : "Image Orient."}
+              {opt === "video" ? "Your Scene" : "Their Scene"}
             </button>
           ))}
         </div>
-
-        {/* Remove Background toggle */}
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={data.removeBg !== false}
-            onChange={(e) => updateNodeData(props.id, { removeBg: e.target.checked } as Partial<CharacterSwapNodeData>)}
-            className="w-3 h-3 rounded border-canvas-border accent-pink-500"
-          />
-          <span className="text-[10px] text-gray-400">Remove background (green screen)</span>
-        </label>
 
         {data.status !== "processing" && (
           <button
