@@ -7,7 +7,7 @@ import BaseNode from "./BaseNode";
 import DropZone from "@/components/ui/DropZone";
 import MediaPreview from "@/components/ui/MediaPreview";
 import { useWorkflowStore } from "@/stores/workflow-store";
-import { fal } from "@/lib/fal";
+import { uploadFile } from "@/lib/upload";
 import type { VideoNodeData } from "@/types";
 
 export default function VideoNode(props: NodeProps) {
@@ -19,8 +19,8 @@ export default function VideoNode(props: NodeProps) {
       updateNodeData(props.id, { status: "uploading" } as Partial<VideoNodeData>);
 
       try {
-        // Upload directly to fal.ai storage via proxy (bypasses Vercel 4.5MB body limit)
-        const url = await fal.storage.upload(file);
+        // Upload via presigned URL (bypasses Vercel 4.5MB body limit)
+        const url = await uploadFile(file);
 
         updateNodeData(props.id, {
           status: "complete",
