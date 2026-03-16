@@ -4,13 +4,21 @@
  * 2. Client uploads directly to presigned URL (bypasses Vercel body limit)
  */
 export async function uploadFile(file: File): Promise<string> {
+  // Normalize content type — iPhone videos may report video/quicktime
+  // but fal.ai expects standard MIME types
+  let contentType = file.type || "application/octet-stream";
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "mp4" || ext === "m4v") contentType = "video/mp4";
+  else if (ext === "mov") contentType = "video/mp4"; // MOV is often H.264 in MP4 container
+  else if (ext === "webm") contentType = "video/webm";
+
   // Step 1: Get presigned upload URL from our server
   const initRes = await fetch("/api/upload/initiate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contentType: file.type || "application/octet-stream",
-      fileName: file.name,
+      contentType,
+      fileName: ext === "mov" ? file.name.replace(/\.mov$/i, ".mp4") : file.name,
     }),
   });
 
@@ -26,7 +34,7 @@ export async function uploadFile(file: File): Promise<string> {
     method: "PUT",
     body: file,
     headers: {
-      "Content-Type": file.type || "application/octet-stream",
+      "Content-Type": contentType,
     },
   });
 
