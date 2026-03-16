@@ -6,8 +6,8 @@ interface TokenBucket {
   lastRefill: number;
 }
 
-const RATE_LIMIT_MAX_TOKENS = 10;
-const RATE_LIMIT_REFILL_RATE = 10; // tokens per minute
+const RATE_LIMIT_MAX_TOKENS = 30;
+const RATE_LIMIT_REFILL_RATE = 30; // tokens per minute
 const RATE_LIMIT_REFILL_INTERVAL = 60 * 1000; // 1 minute in ms
 
 // In-memory store (resets on server restart - fine for single user)
