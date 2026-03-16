@@ -63,7 +63,7 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
           id: `characterSwapNode-${ts()}`,
           type: "characterSwapNode",
           position: { x: 400, y: 200 },
-          data: { label: "Character Swap", category: "processor", status: "idle", orientation: "video" } as never,
+          data: { label: "Character Swap", category: "processor", status: "idle", orientation: "image" } as never,
         },
         {
           id: `outputNode-${ts()}`,

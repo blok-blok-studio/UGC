@@ -52,7 +52,7 @@ export default function CharacterSwapNode(props: NodeProps) {
         {
           video_url: videoUrl,
           image_url: imageUrl,
-          character_orientation: data.orientation || "video",
+          character_orientation: data.orientation || "image",
         },
         props.id,
         (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
@@ -92,7 +92,7 @@ export default function CharacterSwapNode(props: NodeProps) {
               key={opt}
               onClick={() => updateNodeData(props.id, { orientation: opt } as Partial<CharacterSwapNodeData>)}
               className={`text-[10px] px-2 py-0.5 rounded border flex-1 ${
-                (data.orientation || "video") === opt
+                (data.orientation || "image") === opt
                   ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
                   : "border-canvas-border text-gray-500"
               }`}
