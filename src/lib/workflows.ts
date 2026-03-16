@@ -45,12 +45,12 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
     },
     {
       label: "Character Swap",
-      description: "Video + Character → Video",
+      description: "Video + Character → Your Background",
       nodes: [
         {
           id: `videoNode-${ts()}`,
           type: "videoNode",
-          position: { x: 50, y: 100 },
+          position: { x: 50, y: 50 },
           data: { label: "Your Video", category: "input", status: "idle" } as never,
         },
         {
@@ -62,13 +62,19 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
         {
           id: `characterSwapNode-${ts()}`,
           type: "characterSwapNode",
-          position: { x: 400, y: 200 },
+          position: { x: 400, y: 150 },
           data: { label: "Character Swap", category: "processor", status: "idle", orientation: "video" } as never,
+        },
+        {
+          id: `compositeNode-${ts()}`,
+          type: "compositeNode",
+          position: { x: 750, y: 150 },
+          data: { label: "Composite", category: "processor", status: "idle" } as never,
         },
         {
           id: `outputNode-${ts()}`,
           type: "outputNode",
-          position: { x: 750, y: 200 },
+          position: { x: 1100, y: 150 },
           data: { label: "Output", category: "output", status: "idle" } as never,
         },
       ],
@@ -111,9 +117,16 @@ const WORKFLOW_WIRING: Record<string, [string, string, string, string][]> = {
     ["productPlacementNode", "image", "outputNode", "media"],
   ],
   "Character Swap": [
+    // Video → CharacterSwap (motion reference)
     ["videoNode", "video", "characterSwapNode", "reference_video"],
+    // Image → CharacterSwap (character to swap in)
     ["imageNode", "image", "characterSwapNode", "character_image"],
-    ["characterSwapNode", "video", "outputNode", "media"],
+    // Video → Composite (original background)
+    ["videoNode", "video", "compositeNode", "background_video"],
+    // CharacterSwap → Composite (green screen output)
+    ["characterSwapNode", "video", "compositeNode", "greenscreen_video"],
+    // Composite → Output
+    ["compositeNode", "video", "outputNode", "media"],
   ],
   "Text to UGC": [
     ["promptNode", "prompt", "textToVideoNode", "prompt"],
@@ -133,6 +146,7 @@ export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; 
   });
 
   // Build a lookup: nodeType → newId
+  // For Character Swap workflow, videoNode appears once but connects to two targets
   const typeToId: Record<string, string> = {};
   for (const node of nodes) {
     typeToId[node.type!] = node.id;

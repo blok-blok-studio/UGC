@@ -44,9 +44,10 @@ export default function CharacterSwapNode(props: NodeProps) {
       return;
     }
 
-    updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Transferring motion..." } as Partial<CharacterSwapNodeData>);
+    updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Step 1/2: Transferring motion..." } as Partial<CharacterSwapNodeData>);
 
     try {
+      // ── Step 1: Motion transfer via Kling ──
       const params: Record<string, unknown> = {
         video_url: videoUrl,
         image_url: imageUrl,
@@ -55,19 +56,34 @@ export default function CharacterSwapNode(props: NodeProps) {
       if (data.scenePrompt?.trim()) {
         params.prompt = data.scenePrompt.trim();
       }
-      const result = await generate(
+
+      const motionResult = await generate(
         "fal-ai/kling-video/v2.6/pro/motion-control",
         params,
         props.id,
-        (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
+        (status) => updateNodeData(props.id, { progressText: `Step 1/2: ${status}` } as Partial<CharacterSwapNodeData>),
+      );
+
+      // ── Step 2: Background removal (always run — needed for composite) ──
+      updateNodeData(props.id, { progressText: "Step 2/2: Removing background..." } as Partial<CharacterSwapNodeData>);
+
+      const bgResult = await generate(
+        "bria/video/background-removal",
+        {
+          video_url: motionResult.resultUrl,
+          background_color: "Green",
+          output_container_and_codec: "mp4_h264",
+        },
+        props.id,
+        (status) => updateNodeData(props.id, { progressText: `Step 2/2: ${status}` } as Partial<CharacterSwapNodeData>),
       );
 
       updateNodeData(props.id, {
         status: "complete",
-        resultUrl: result.resultUrl,
+        resultUrl: bgResult.resultUrl,
         progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
-      setPreview(result.resultUrl, "video");
+      setPreview(bgResult.resultUrl, "video");
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",
@@ -75,7 +91,7 @@ export default function CharacterSwapNode(props: NodeProps) {
         progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
     }
-  }, [props.id, data.orientation, updateNodeData, getConnectedInputs, setPreview]);
+  }, [props.id, data.orientation, data.scenePrompt, updateNodeData, getConnectedInputs, setPreview]);
 
   return (
     <BaseNode
@@ -88,31 +104,14 @@ export default function CharacterSwapNode(props: NodeProps) {
     >
       <div className="space-y-2">
         <p className="text-[10px] text-gray-500">
-          Character copies your movements in your scene
+          Your movements → Character&apos;s body → Your background
         </p>
-
-        {/* Orientation toggle */}
-        <div className="flex gap-1">
-          {(["video", "image"] as const).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => updateNodeData(props.id, { orientation: opt } as Partial<CharacterSwapNodeData>)}
-              className={`text-[10px] px-2 py-0.5 rounded border flex-1 ${
-                (data.orientation || "video") === opt
-                  ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
-                  : "border-canvas-border text-gray-500"
-              }`}
-            >
-              {opt === "video" ? "Your Scene" : "Their Scene"}
-            </button>
-          ))}
-        </div>
 
         {/* Scene prompt */}
         <textarea
           value={data.scenePrompt || ""}
           onChange={(e) => updateNodeData(props.id, { scenePrompt: e.target.value } as Partial<CharacterSwapNodeData>)}
-          placeholder="Describe the scene (e.g. 'in a modern apartment, warm lighting')"
+          placeholder="Optional: describe the scene style"
           className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1 text-[10px] text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-pink-500/50"
           rows={2}
         />
