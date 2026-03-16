@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const text = await res.text();
-      console.error("Fal initiate failed:", text);
+      console.error("Fal initiate failed:", res.status, text);
       return NextResponse.json(
-        { error: "Failed to initiate upload" },
+        { error: `Upload failed (${res.status}): ${text.slice(0, 200)}` },
         { status: 500 }
       );
     }
@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
     const data = await res.json();
     // Returns { upload_url, file_url }
     return NextResponse.json(data);
-  } catch {
-    console.error("Upload initiate failed");
+  } catch (err) {
+    console.error("Upload initiate failed:", err);
     return NextResponse.json(
-      { error: "Upload initiate failed" },
+      { error: `Upload initiate failed: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }
