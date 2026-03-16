@@ -8,6 +8,7 @@ const ALLOWED_MODELS = new Set([
   "fal-ai/bytedance/omnihuman/v1.5",
   "fal-ai/bria/rmbg/v2",
   "fal-ai/flux/schnell",
+  "bria/video/background-removal",
 ]);
 
 export async function POST(request: NextRequest) {
