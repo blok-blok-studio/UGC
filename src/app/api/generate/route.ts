@@ -3,7 +3,6 @@ import { checkRateLimit } from "@/lib/rate-limiter";
 import { sanitizePrompt } from "@/lib/validators";
 
 // Allowlist of model IDs that can be called through this endpoint
-// Prevents abuse of the API key to call arbitrary fal.ai models
 const ALLOWED_MODELS = new Set([
   "easel-ai/advanced-face-swap",
   "fal-ai/kling-video/v2.6/pro/motion-control",
@@ -14,19 +13,22 @@ const ALLOWED_MODELS = new Set([
   "fal-ai/flux/schnell",
 ]);
 
+// Fast models that complete quickly (< 30s) - use subscribe
+const FAST_MODELS = new Set([
+  "fal-ai/bria/rmbg/v2",
+  "fal-ai/flux/schnell",
+  "easel-ai/advanced-face-swap",
+]);
+
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit check
     const rateLimit = checkRateLimit("generate");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please wait before generating.", remaining: 0, resetIn: rateLimit.resetIn },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": Math.ceil(rateLimit.resetIn / 1000).toString(),
-          },
-        }
+        { status: 429, headers: { "Retry-After": Math.ceil(rateLimit.resetIn / 1000).toString() } }
       );
     }
 
@@ -40,81 +42,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate model ID against allowlist
     if (!ALLOWED_MODELS.has(modelId)) {
-      return NextResponse.json(
-        { error: "Model not allowed" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Model not allowed" }, { status: 403 });
     }
 
-    // Sanitize any text prompts in inputs
     const sanitizedInputs = { ...inputs };
     if (sanitizedInputs.prompt && typeof sanitizedInputs.prompt === "string") {
       sanitizedInputs.prompt = sanitizePrompt(sanitizedInputs.prompt);
     }
 
-    // Import and configure fal with server-side key
     const { fal } = await import("@fal-ai/client");
-    fal.config({
-      credentials: process.env.FAL_KEY,
-    });
+    fal.config({ credentials: process.env.FAL_KEY });
 
-    // Call the model via fal.ai
-    const result = await fal.subscribe(modelId, {
-      input: sanitizedInputs,
-      logs: true,
-      onQueueUpdate: (update) => {
-        // Queue updates are logged server-side only
-        if (update.status === "IN_PROGRESS") {
-          console.log(`[${nodeId}] Generation in progress...`);
-        }
-      },
-    });
+    if (FAST_MODELS.has(modelId)) {
+      // Fast models: use subscribe (blocking, completes within timeout)
+      const result = await fal.subscribe(modelId, {
+        input: sanitizedInputs,
+        logs: true,
+      });
 
-    // Extract the result URL based on model output format
-    let resultUrl: string | undefined;
-    let resultType: "image" | "video" = "image";
-    const data = result.data as Record<string, unknown>;
+      const { resultUrl, resultType } = extractResult(result.data as Record<string, unknown>);
+      if (!resultUrl) {
+        return NextResponse.json({ error: "No output generated from model" }, { status: 500 });
+      }
 
-    // Different models return results in different formats
-    if (data.video && typeof data.video === "object") {
-      const video = data.video as Record<string, unknown>;
-      resultUrl = video.url as string;
-      resultType = "video";
-    } else if (data.image && typeof data.image === "object") {
-      const image = data.image as Record<string, unknown>;
-      resultUrl = image.url as string;
-      resultType = "image";
-    } else if (Array.isArray(data.images) && data.images.length > 0) {
-      const firstImage = data.images[0] as Record<string, unknown>;
-      resultUrl = firstImage.url as string;
-      resultType = "image";
-    } else if (typeof data.url === "string") {
-      resultUrl = data.url;
-    }
+      return NextResponse.json({ nodeId, resultUrl, resultType, status: "complete" });
+    } else {
+      // Slow models: submit to queue, return request_id for polling
+      const { request_id } = await fal.queue.submit(modelId, {
+        input: sanitizedInputs,
+      });
 
-    if (!resultUrl) {
-      return NextResponse.json(
-        { error: "No output generated from model" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      nodeId,
-      resultUrl,
-      resultType,
-      metadata: {
+      return NextResponse.json({
+        nodeId,
+        requestId: request_id,
         modelId,
-        remaining: rateLimit.remaining,
-      },
-    });
+        status: "queued",
+      });
+    }
   } catch (error) {
-    console.error("Generation failed:", error);
-    return NextResponse.json(
-      { error: "Generation failed. Please try again." },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Generation failed:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function extractResult(data: Record<string, unknown>): { resultUrl?: string; resultType: "image" | "video" } {
+  if (data.video && typeof data.video === "object") {
+    return { resultUrl: (data.video as Record<string, unknown>).url as string, resultType: "video" };
+  }
+  if (data.image && typeof data.image === "object") {
+    return { resultUrl: (data.image as Record<string, unknown>).url as string, resultType: "image" };
+  }
+  if (Array.isArray(data.images) && data.images.length > 0) {
+    return { resultUrl: (data.images[0] as Record<string, unknown>).url as string, resultType: "image" };
+  }
+  if (typeof data.url === "string") {
+    return { resultUrl: data.url, resultType: "image" };
+  }
+  return { resultType: "image" };
 }
