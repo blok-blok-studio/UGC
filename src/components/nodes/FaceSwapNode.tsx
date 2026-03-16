@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { generate } from "@/lib/generate";
 import type { FaceSwapNodeData } from "@/types";
 
 export default function FaceSwapNode(props: NodeProps) {
@@ -42,31 +43,21 @@ export default function FaceSwapNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined } as Partial<FaceSwapNodeData>);
 
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId: "easel-ai/advanced-face-swap",
-          inputs: {
-            face_image_0: sourceUrl,
-            target_image: targetUrl,
-            workflow_type: data.preserveHair === "target" ? "target_hair" : "user_hair",
-          },
-          nodeId: props.id,
-        }),
-      });
+      const result = await generate(
+        "easel-ai/advanced-face-swap",
+        {
+          face_image_0: sourceUrl,
+          target_image: targetUrl,
+          workflow_type: data.preserveHair === "target" ? "target_hair" : "user_hair",
+        },
+        props.id,
+      );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const result = await res.json();
       updateNodeData(props.id, {
         status: "complete",
         resultUrl: result.resultUrl,
       } as Partial<FaceSwapNodeData>);
-      setPreview(result.resultUrl, "image");
+      setPreview(result.resultUrl, result.resultType);
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",

@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { generate } from "@/lib/generate";
 import type { ProductPlacementNodeData } from "@/types";
 
 export default function ProductPlacementNode(props: NodeProps) {
@@ -39,32 +40,21 @@ export default function ProductPlacementNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined } as Partial<ProductPlacementNodeData>);
 
     try {
-      // Use image generation with a product placement prompt
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId: "fal-ai/flux/schnell",
-          inputs: {
-            prompt: `A person naturally holding a product in their hands, professional UGC style photography, natural lighting, social media ready`,
-            image_url: personUrl,
-            num_images: 1,
-          },
-          nodeId: props.id,
-        }),
-      });
+      const result = await generate(
+        "fal-ai/flux/schnell",
+        {
+          prompt: `A person naturally holding a product in their hands, professional UGC style photography, natural lighting, social media ready`,
+          image_url: personUrl,
+          num_images: 1,
+        },
+        props.id,
+      );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const result = await res.json();
       updateNodeData(props.id, {
         status: "complete",
         resultUrl: result.resultUrl,
       } as Partial<ProductPlacementNodeData>);
-      setPreview(result.resultUrl, "image");
+      setPreview(result.resultUrl, result.resultType);
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",

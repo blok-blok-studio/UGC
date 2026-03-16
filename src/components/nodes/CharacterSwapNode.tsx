@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { generate } from "@/lib/generate";
 import type { CharacterSwapNodeData } from "@/types";
 
 export default function CharacterSwapNode(props: NodeProps) {
@@ -46,31 +47,22 @@ export default function CharacterSwapNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined } as Partial<CharacterSwapNodeData>);
 
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId: "fal-ai/kling-video/v2.6/pro/motion-control",
-          inputs: {
-            video_url: videoUrl,
-            image_url: imageUrl,
-            character_orientation: data.orientation || "video",
-          },
-          nodeId: props.id,
-        }),
-      });
+      const result = await generate(
+        "fal-ai/kling-video/v2.6/pro/motion-control",
+        {
+          video_url: videoUrl,
+          image_url: imageUrl,
+          character_orientation: data.orientation || "video",
+        },
+        props.id,
+        (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
+      );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const result = await res.json();
       updateNodeData(props.id, {
         status: "complete",
         resultUrl: result.resultUrl,
       } as Partial<CharacterSwapNodeData>);
-      setPreview(result.resultUrl, "video");
+      setPreview(result.resultUrl, result.resultType);
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",

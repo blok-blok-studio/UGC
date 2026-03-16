@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { generate } from "@/lib/generate";
 import type { BackgroundNodeData } from "@/types";
 
 export default function BackgroundNode(props: NodeProps) {
@@ -43,46 +44,31 @@ export default function BackgroundNode(props: NodeProps) {
     } as Partial<BackgroundNodeData>);
 
     try {
-      // First remove background, then generate new one
-      const bgRemoveRes = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId: "fal-ai/bria/rmbg/v2",
-          inputs: { image_url: sourceUrl },
-          nodeId: props.id,
-        }),
-      });
-
-      if (!bgRemoveRes.ok) throw new Error("Background removal failed");
-
-      const bgResult = await bgRemoveRes.json();
+      // First remove background
+      const bgResult = await generate(
+        "fal-ai/bria/rmbg/v2",
+        { image_url: sourceUrl },
+        props.id,
+      );
 
       // Generate new background image
-      const genRes = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId: "fal-ai/flux/schnell",
-          inputs: {
-            prompt: `${bgPrompt}, professional photography background, high quality`,
-            num_images: 1,
-          },
-          nodeId: props.id,
-        }),
-      });
-
-      if (!genRes.ok) throw new Error("Background generation failed");
-
-      const genResult = await genRes.json();
+      const genResult = await generate(
+        "fal-ai/flux/schnell",
+        {
+          prompt: `${bgPrompt}, professional photography background, high quality`,
+          num_images: 1,
+        },
+        props.id,
+      );
 
       // For now, return the background-removed image
       // In production, you'd composite these together
+      const finalUrl = bgResult.resultUrl || genResult.resultUrl;
       updateNodeData(props.id, {
         status: "complete",
-        resultUrl: bgResult.resultUrl || genResult.resultUrl,
+        resultUrl: finalUrl,
       } as Partial<BackgroundNodeData>);
-      setPreview(bgResult.resultUrl || genResult.resultUrl, "image");
+      setPreview(finalUrl, "image");
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",

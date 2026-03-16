@@ -8,6 +8,7 @@ import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import ModelSelector from "@/components/ui/ModelSelector";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { generate } from "@/lib/generate";
 import { NODE_MODEL_OPTIONS } from "@/lib/models";
 import type { TextToVideoNodeData, PromptNodeData } from "@/types";
 
@@ -65,27 +66,18 @@ export default function TextToVideoNode(props: NodeProps) {
         modelInputs.image_url = imageUrl;
       }
 
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelId,
-          inputs: modelInputs,
-          nodeId: props.id,
-        }),
-      });
+      const result = await generate(
+        modelId,
+        modelInputs,
+        props.id,
+        (status) => updateNodeData(props.id, { progressText: status } as Partial<TextToVideoNodeData>),
+      );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const result = await res.json();
       updateNodeData(props.id, {
         status: "complete",
         resultUrl: result.resultUrl,
       } as Partial<TextToVideoNodeData>);
-      setPreview(result.resultUrl, "video");
+      setPreview(result.resultUrl, result.resultType);
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",
