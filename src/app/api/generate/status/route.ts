@@ -58,9 +58,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       status: status.status === "IN_QUEUE" ? "queued" : "processing",
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Status check failed:", message);
+  } catch (error: unknown) {
+    let message = "Unknown error";
+    const falError = error as { message?: string; body?: { detail?: Array<{ msg?: string; loc?: string[] }> }; status?: number };
+    if (falError.body?.detail) {
+      message = falError.body.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+    } else if (falError.message) {
+      message = falError.message;
+    }
+    console.error("Status check failed:", error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -80,9 +80,17 @@ export async function POST(request: NextRequest) {
         status: "queued",
       });
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Generation failed:", message);
+  } catch (error: unknown) {
+    let message = "Unknown error";
+    // fal.ai client errors have a body with validation details
+    const falError = error as { message?: string; body?: { detail?: Array<{ msg?: string; loc?: string[] }> }; status?: number };
+    if (falError.body?.detail) {
+      const details = falError.body.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+      message = details;
+    } else if (falError.message) {
+      message = falError.message;
+    }
+    console.error("Generation failed:", error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
