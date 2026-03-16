@@ -45,7 +45,7 @@ async function pollForResult(
   modelId: string,
   onProgress?: (status: string) => void,
 ): Promise<GenerateResult> {
-  const maxAttempts = 120; // 10 minutes max (5s intervals)
+  const maxAttempts = 240; // 20 minutes max (5s intervals)
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -76,5 +76,5 @@ async function pollForResult(
     }
   }
 
-  throw new Error("Generation timed out after 10 minutes");
+  throw new Error("Generation timed out after 20 minutes");
 }
