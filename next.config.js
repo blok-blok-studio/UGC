@@ -36,7 +36,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' blob: data: https://fal.media https://v3.fal.media https://storage.googleapis.com",
               "media-src 'self' blob: data: https://fal.media https://v3.fal.media https://storage.googleapis.com",
-              "connect-src 'self' https://queue.fal.run https://fal.run https://rest.alpha.fal.ai",
+              "connect-src 'self' https://queue.fal.run https://fal.run https://rest.alpha.fal.ai https://fal.media https://v3.fal.media https://storage.googleapis.com",
               "font-src 'self'",
               "frame-ancestors 'none'",
             ].join("; "),

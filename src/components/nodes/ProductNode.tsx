@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import DropZone from "@/components/ui/DropZone";
 import MediaPreview from "@/components/ui/MediaPreview";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { fal } from "@/lib/fal";
 import type { ProductNodeData } from "@/types";
 
 export default function ProductNode(props: NodeProps) {
@@ -18,17 +19,9 @@ export default function ProductNode(props: NodeProps) {
       updateNodeData(props.id, { status: "uploading" } as Partial<ProductNodeData>);
 
       try {
-        // First upload the file
-        const formData = new FormData();
-        formData.append("file", file);
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          throw new Error(err.error || "Upload failed");
-        }
-
-        const { url, fileName } = await uploadRes.json();
+        // Upload directly to fal.ai storage via proxy (bypasses Vercel 4.5MB body limit)
+        const url = await fal.storage.upload(file);
+        const fileName = file.name;
 
         // Auto-remove background for product images
         updateNodeData(props.id, { status: "processing" } as Partial<ProductNodeData>);

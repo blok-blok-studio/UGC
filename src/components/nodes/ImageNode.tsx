@@ -7,6 +7,7 @@ import BaseNode from "./BaseNode";
 import DropZone from "@/components/ui/DropZone";
 import MediaPreview from "@/components/ui/MediaPreview";
 import { useWorkflowStore } from "@/stores/workflow-store";
+import { fal } from "@/lib/fal";
 import type { ImageNodeData } from "@/types";
 
 export default function ImageNode(props: NodeProps) {
@@ -18,20 +19,13 @@ export default function ImageNode(props: NodeProps) {
       updateNodeData(props.id, { status: "uploading" } as Partial<ImageNodeData>);
 
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        // Upload directly to fal.ai storage via proxy (bypasses Vercel 4.5MB body limit)
+        const url = await fal.storage.upload(file);
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || "Upload failed");
-        }
-
-        const { url, fileName } = await res.json();
         updateNodeData(props.id, {
           status: "complete",
           fileUrl: url,
-          fileName,
+          fileName: file.name,
           fileType: file.type,
           thumbnailUrl: URL.createObjectURL(file),
         } as Partial<ImageNodeData>);

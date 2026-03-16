@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limiter";
 
+// Allow longer timeout for large video uploads on Vercel
+export const maxDuration = 60;
+
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
