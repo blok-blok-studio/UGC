@@ -55,6 +55,8 @@ export interface CharacterSwapNodeData extends BaseNodeData {
   category: "processor";
   resultUrl?: string;
   orientation?: "video" | "image";
+  removeBg?: boolean;
+  progressText?: string;
 }
 
 export interface TextToVideoNodeData extends BaseNodeData {
@@ -118,7 +120,8 @@ export type ModelId =
   | "fal-ai/kling-video/v3/pro/image-to-video"
   | "fal-ai/bytedance/omnihuman/v1.5"
   | "fal-ai/bria/rmbg/v2"
-  | "fal-ai/flux/schnell";
+  | "fal-ai/flux/schnell"
+  | "bria/video/background-removal";
 
 export interface GenerationRequest {
   modelId: ModelId;

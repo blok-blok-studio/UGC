@@ -44,10 +44,11 @@ export default function CharacterSwapNode(props: NodeProps) {
       return;
     }
 
-    updateNodeData(props.id, { status: "processing", error: undefined } as Partial<CharacterSwapNodeData>);
+    updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Transferring motion..." } as Partial<CharacterSwapNodeData>);
 
     try {
-      const result = await generate(
+      // Step 1: Generate motion transfer
+      const motionResult = await generate(
         "fal-ai/kling-video/v2.6/pro/motion-control",
         {
           video_url: videoUrl,
@@ -58,18 +59,43 @@ export default function CharacterSwapNode(props: NodeProps) {
         (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
       );
 
-      updateNodeData(props.id, {
-        status: "complete",
-        resultUrl: result.resultUrl,
-      } as Partial<CharacterSwapNodeData>);
-      setPreview(result.resultUrl, result.resultType);
+      // Step 2: Remove background if enabled
+      if (data.removeBg !== false) {
+        updateNodeData(props.id, { progressText: "Removing background..." } as Partial<CharacterSwapNodeData>);
+
+        const bgResult = await generate(
+          "bria/video/background-removal",
+          {
+            video_url: motionResult.resultUrl,
+            background_color: "Green",
+            output_container_and_codec: "mp4_h264",
+          },
+          props.id,
+          (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
+        );
+
+        updateNodeData(props.id, {
+          status: "complete",
+          resultUrl: bgResult.resultUrl,
+          progressText: undefined,
+        } as Partial<CharacterSwapNodeData>);
+        setPreview(bgResult.resultUrl, "video");
+      } else {
+        updateNodeData(props.id, {
+          status: "complete",
+          resultUrl: motionResult.resultUrl,
+          progressText: undefined,
+        } as Partial<CharacterSwapNodeData>);
+        setPreview(motionResult.resultUrl, motionResult.resultType);
+      }
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",
         error: err instanceof Error ? err.message : "Generation failed",
+        progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
     }
-  }, [props.id, data.orientation, updateNodeData, getConnectedInputs, setPreview]);
+  }, [props.id, data.orientation, data.removeBg, updateNodeData, getConnectedInputs, setPreview]);
 
   return (
     <BaseNode
@@ -102,6 +128,17 @@ export default function CharacterSwapNode(props: NodeProps) {
           ))}
         </div>
 
+        {/* Remove Background toggle */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data.removeBg !== false}
+            onChange={(e) => updateNodeData(props.id, { removeBg: e.target.checked } as Partial<CharacterSwapNodeData>)}
+            className="w-3 h-3 rounded border-canvas-border accent-pink-500"
+          />
+          <span className="text-[10px] text-gray-400">Remove background (green screen)</span>
+        </label>
+
         {data.status !== "processing" && (
           <button
             onClick={handleGenerate}
@@ -112,7 +149,7 @@ export default function CharacterSwapNode(props: NodeProps) {
           </button>
         )}
 
-        {data.status === "processing" && <ProgressBar label="Transferring motion..." />}
+        {data.status === "processing" && <ProgressBar label={data.progressText || "Processing..."} />}
 
         {data.resultUrl && (
           <MediaPreview url={data.resultUrl} type="video" compact />

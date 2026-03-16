@@ -11,6 +11,7 @@ const ALLOWED_MODELS = new Set([
   "fal-ai/bytedance/omnihuman/v1.5",
   "fal-ai/bria/rmbg/v2",
   "fal-ai/flux/schnell",
+  "bria/video/background-removal",
 ]);
 
 // Fast models that complete quickly (< 30s) - use subscribe
