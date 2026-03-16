@@ -100,7 +100,7 @@ export default function FlowCanvas() {
   const defaultEdgeOptions = useMemo(
     () => ({
       type: "custom" as const,
-      animated: true,
+      animated: false,
     }),
     []
   );

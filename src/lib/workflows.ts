@@ -127,7 +127,7 @@ export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; 
         id: `e-${input.id}-${proc.id}`,
         source: input.id,
         target: proc.id,
-        animated: true,
+        animated: false,
         type: "custom",
         style: { stroke: "#6366f1", strokeWidth: 2 },
       });
@@ -141,7 +141,7 @@ export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; 
         id: `e-${proc.id}-${out.id}`,
         source: proc.id,
         target: out.id,
-        animated: true,
+        animated: false,
         type: "custom",
         style: { stroke: "#6366f1", strokeWidth: 2 },
       });

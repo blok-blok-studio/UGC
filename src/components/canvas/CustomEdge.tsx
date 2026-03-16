@@ -21,6 +21,8 @@ export default function CustomEdge({
     targetPosition,
   });
 
+  const color = selected ? "#818cf8" : "#6366f1";
+
   return (
     <>
       {/* Glow effect */}
@@ -28,21 +30,19 @@ export default function CustomEdge({
         id={`${id}-glow`}
         path={edgePath}
         style={{
-          stroke: selected ? "#818cf8" : "#6366f1",
+          stroke: color,
           strokeWidth: selected ? 6 : 4,
           opacity: 0.15,
           filter: "blur(4px)",
         }}
       />
-      {/* Main edge with animated dash */}
+      {/* Main edge — solid line for connected edges */}
       <BaseEdge
         id={id}
         path={edgePath}
         style={{
-          stroke: selected ? "#818cf8" : "#6366f1",
+          stroke: color,
           strokeWidth: 2,
-          strokeDasharray: "6 6",
-          animation: "flowLine 1.5s linear infinite",
         }}
       />
     </>
