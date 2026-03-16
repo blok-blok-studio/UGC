@@ -102,6 +102,25 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
   ];
 }
 
+// Edge wiring definitions for each workflow template.
+// Maps: [sourceNodeType, sourceHandle, targetNodeType, targetHandle]
+const WORKFLOW_WIRING: Record<string, [string, string, string, string][]> = {
+  "Product Hold": [
+    ["imageNode", "image", "productPlacementNode", "person_image"],
+    ["productNode", "image", "productPlacementNode", "product_image"],
+    ["productPlacementNode", "image", "outputNode", "media"],
+  ],
+  "Character Swap": [
+    ["videoNode", "video", "characterSwapNode", "reference_video"],
+    ["imageNode", "image", "characterSwapNode", "character_image"],
+    ["characterSwapNode", "video", "outputNode", "media"],
+  ],
+  "Text to UGC": [
+    ["promptNode", "prompt", "textToVideoNode", "prompt"],
+    ["textToVideoNode", "video", "outputNode", "media"],
+  ],
+};
+
 export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; edges: Edge[] } {
   // Generate fresh IDs to avoid conflicts
   const idMap: Record<string, string> = {};
@@ -113,40 +132,23 @@ export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; 
     return { ...node, id: newId };
   });
 
-  // Auto-wire edges: connect outputs of input nodes to inputs of processor nodes,
-  // and outputs of processor nodes to output nodes
-  const edges: Edge[] = [];
-  const inputNodes = nodes.filter((n) => (n.data as Record<string, unknown>).category === "input");
-  const processorNodes = nodes.filter((n) => (n.data as Record<string, unknown>).category === "processor");
-  const outputNodes = nodes.filter((n) => (n.data as Record<string, unknown>).category === "output");
-
-  // Connect input → processor
-  for (const input of inputNodes) {
-    for (const proc of processorNodes) {
-      edges.push({
-        id: `e-${input.id}-${proc.id}`,
-        source: input.id,
-        target: proc.id,
-        animated: false,
-        type: "custom",
-        style: { stroke: "#6366f1", strokeWidth: 2 },
-      });
-    }
+  // Build a lookup: nodeType → newId
+  const typeToId: Record<string, string> = {};
+  for (const node of nodes) {
+    typeToId[node.type!] = node.id;
   }
 
-  // Connect processor → output
-  for (const proc of processorNodes) {
-    for (const out of outputNodes) {
-      edges.push({
-        id: `e-${proc.id}-${out.id}`,
-        source: proc.id,
-        target: out.id,
-        animated: false,
-        type: "custom",
-        style: { stroke: "#6366f1", strokeWidth: 2 },
-      });
-    }
-  }
+  const wiring = WORKFLOW_WIRING[template.label] || [];
+  const edges: Edge[] = wiring.map(([srcType, srcHandle, tgtType, tgtHandle]) => ({
+    id: `e-${typeToId[srcType]}-${srcHandle}-${typeToId[tgtType]}-${tgtHandle}`,
+    source: typeToId[srcType],
+    sourceHandle: srcHandle,
+    target: typeToId[tgtType],
+    targetHandle: tgtHandle,
+    animated: false,
+    type: "custom",
+    style: { stroke: "#6366f1", strokeWidth: 2 },
+  }));
 
   return { nodes, edges };
 }
