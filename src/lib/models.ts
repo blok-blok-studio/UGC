@@ -184,6 +184,16 @@ export const NODE_PALETTE: PaletteItem[] = [
     inputs: ["source_media", "background_prompt"],
     outputs: ["image"],
   },
+  {
+    type: "compositeNode",
+    label: "Composite",
+    category: "processor",
+    description: "Overlay green screen onto background",
+    color: "#8b5cf6",
+    icon: "Layers",
+    inputs: ["background_video", "greenscreen_video"],
+    outputs: ["video"],
+  },
   // Output nodes
   {
     type: "outputNode",

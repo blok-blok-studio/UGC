@@ -76,6 +76,12 @@ export interface BackgroundNodeData extends BaseNodeData {
   backgroundPrompt?: string;
 }
 
+export interface CompositeNodeData extends BaseNodeData {
+  category: "processor";
+  resultUrl?: string;
+  progressText?: string;
+}
+
 export interface OutputNodeData extends BaseNodeData {
   category: "output";
   resultUrl?: string;
@@ -93,6 +99,7 @@ export type AppNodeData =
   | TextToVideoNodeData
   | ProductPlacementNodeData
   | BackgroundNodeData
+  | CompositeNodeData
   | OutputNodeData;
 
 export type AppNode = Node<AppNodeData>;

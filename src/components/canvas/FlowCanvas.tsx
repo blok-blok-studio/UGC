@@ -24,6 +24,7 @@ import CharacterSwapNode from "@/components/nodes/CharacterSwapNode";
 import TextToVideoNode from "@/components/nodes/TextToVideoNode";
 import ProductPlacementNode from "@/components/nodes/ProductPlacementNode";
 import BackgroundNode from "@/components/nodes/BackgroundNode";
+import CompositeNode from "@/components/nodes/CompositeNode";
 import OutputNode from "@/components/nodes/OutputNode";
 import CustomEdge from "./CustomEdge";
 
@@ -37,6 +38,7 @@ const nodeTypes: NodeTypes = {
   textToVideoNode: TextToVideoNode,
   productPlacementNode: ProductPlacementNode,
   backgroundNode: BackgroundNode,
+  compositeNode: CompositeNode,
   outputNode: OutputNode,
 };
 
@@ -81,6 +83,11 @@ const DEFAULT_NODE_DATA: Record<string, () => any> = {
   }),
   backgroundNode: () => ({
     label: "Background",
+    category: "processor",
+    status: "idle",
+  }),
+  compositeNode: () => ({
+    label: "Composite",
     category: "processor",
     status: "idle",
   }),
