@@ -28,7 +28,8 @@ export default function OutputNode(props: NodeProps) {
       const isVideo = sourceNode.type?.includes("video") ||
         sourceNode.type?.includes("Video") ||
         sourceNode.type === "characterSwapNode" ||
-        sourceNode.type === "textToVideoNode";
+        sourceNode.type === "textToVideoNode" ||
+        sourceNode.type === "compositeNode";
 
       updateNodeData(props.id, {
         status: "complete",

@@ -33,9 +33,15 @@ export async function chromaKeyComposite(
 
   // Set up MediaRecorder
   const stream = canvas.captureStream(30);
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-    ? "video/webm;codecs=vp8"
-    : "video/webm";
+  // Prefer MP4 (H.264) for universal playback, fallback to WebM
+  const mimeType = MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
+    ? "video/mp4;codecs=avc1"
+    : MediaRecorder.isTypeSupported("video/mp4")
+      ? "video/mp4"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+        ? "video/webm;codecs=vp8"
+        : "video/webm";
+  const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
@@ -43,7 +49,7 @@ export async function chromaKeyComposite(
   const done = new Promise<File>((resolve, reject) => {
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: mimeType });
-      resolve(new File([blob], "composite.webm", { type: mimeType }));
+      resolve(new File([blob], `composite.${ext}`, { type: mimeType }));
     };
     recorder.onerror = () => reject(new Error("Recording failed"));
   });
