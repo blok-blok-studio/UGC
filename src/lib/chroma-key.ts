@@ -119,15 +119,23 @@ export async function chromaKeyComposite(
   return done;
 }
 
-function loadVideo(url: string): Promise<HTMLVideoElement> {
+async function loadVideo(url: string): Promise<HTMLVideoElement> {
+  // Fetch as blob to avoid CORS issues with fal.media
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch video: ${url}`);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
-    video.crossOrigin = "anonymous";
     video.preload = "auto";
     video.playsInline = true;
     video.muted = true;
     video.onloadedmetadata = () => resolve(video);
-    video.onerror = () => reject(new Error(`Failed to load video: ${url}`));
-    video.src = url;
+    video.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      reject(new Error(`Failed to load video: ${url}`));
+    };
+    video.src = blobUrl;
   });
 }
