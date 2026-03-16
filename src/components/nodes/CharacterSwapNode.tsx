@@ -47,13 +47,17 @@ export default function CharacterSwapNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Transferring motion..." } as Partial<CharacterSwapNodeData>);
 
     try {
+      const params: Record<string, unknown> = {
+        video_url: videoUrl,
+        image_url: imageUrl,
+        character_orientation: data.orientation || "video",
+      };
+      if (data.scenePrompt?.trim()) {
+        params.prompt = data.scenePrompt.trim();
+      }
       const result = await generate(
         "fal-ai/kling-video/v2.6/pro/motion-control",
-        {
-          video_url: videoUrl,
-          image_url: imageUrl,
-          character_orientation: data.orientation || "video",
-        },
+        params,
         props.id,
         (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
       );
@@ -103,6 +107,15 @@ export default function CharacterSwapNode(props: NodeProps) {
             </button>
           ))}
         </div>
+
+        {/* Scene prompt */}
+        <textarea
+          value={data.scenePrompt || ""}
+          onChange={(e) => updateNodeData(props.id, { scenePrompt: e.target.value } as Partial<CharacterSwapNodeData>)}
+          placeholder="Describe the scene (e.g. 'in a modern apartment, warm lighting')"
+          className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1 text-[10px] text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-pink-500/50"
+          rows={2}
+        />
 
         {data.status !== "processing" && (
           <button

@@ -55,6 +55,7 @@ export interface CharacterSwapNodeData extends BaseNodeData {
   category: "processor";
   resultUrl?: string;
   orientation?: "video" | "image";
+  scenePrompt?: string;
   removeBg?: boolean;
   progressText?: string;
 }
