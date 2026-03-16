@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Styles ────────────────────────────────────────────── */
+
+:root {
+  --canvas-bg: #0a0a0f;
+  --canvas-grid: #1a1a2e;
+  --canvas-surface: #12121a;
+  --canvas-border: #2a2a3e;
+}
+
+body {
+  background-color: var(--canvas-bg);
+  color: #e5e7eb;
+  overflow: hidden;
+}
+
+/* ── React Flow Overrides ───────────────────────────────────── */
+
+.react-flow__node {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.react-flow__handle {
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+.react-flow__minimap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.react-flow__controls button {
+  width: 28px;
+  height: 28px;
+}
+
+.react-flow__controls button svg {
+  fill: #9ca3af;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3e;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4e;
+}
+
+/* ── Flow Line Animation ────────────────────────────────────── */
+
+@keyframes flowLine {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Selection ──────────────────────────────────────────────── */
+
+::selection {
+  background-color: rgba(99, 102, 241, 0.3);
+  color: white;
+}
