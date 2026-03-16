@@ -56,12 +56,12 @@ export default function CharacterSwapNode(props: NodeProps) {
           character_orientation: data.orientation || "image",
         },
         props.id,
-        (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
+        (status) => updateNodeData(props.id, { progressText: `Step 1/2: ${status}` } as Partial<CharacterSwapNodeData>),
       );
 
       // Step 2: Remove background if enabled
       if (data.removeBg !== false) {
-        updateNodeData(props.id, { progressText: "Removing background..." } as Partial<CharacterSwapNodeData>);
+        updateNodeData(props.id, { progressText: "Step 2/2: Removing background..." } as Partial<CharacterSwapNodeData>);
 
         const bgResult = await generate(
           "bria/video/background-removal",
@@ -71,7 +71,7 @@ export default function CharacterSwapNode(props: NodeProps) {
             output_container_and_codec: "mp4_h264",
           },
           props.id,
-          (status) => updateNodeData(props.id, { progressText: status } as Partial<CharacterSwapNodeData>),
+          (status) => updateNodeData(props.id, { progressText: `Step 2/2: ${status}` } as Partial<CharacterSwapNodeData>),
         );
 
         updateNodeData(props.id, {
