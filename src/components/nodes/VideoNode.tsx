@@ -8,6 +8,7 @@ import DropZone from "@/components/ui/DropZone";
 import MediaPreview from "@/components/ui/MediaPreview";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import { uploadFile } from "@/lib/upload";
+import { needsTranscode, transcodeToWebM } from "@/lib/transcode";
 import type { VideoNodeData } from "@/types";
 
 export default function VideoNode(props: NodeProps) {
@@ -16,11 +17,21 @@ export default function VideoNode(props: NodeProps) {
 
   const handleFile = useCallback(
     async (file: File) => {
-      updateNodeData(props.id, { status: "uploading" } as Partial<VideoNodeData>);
-
       try {
+        let uploadableFile = file;
+
+        // Transcode HEVC/iPhone videos to WebM for fal.ai compatibility
+        if (await needsTranscode(file)) {
+          updateNodeData(props.id, { status: "processing", error: undefined } as Partial<VideoNodeData>);
+          uploadableFile = await transcodeToWebM(file, (pct) => {
+            updateNodeData(props.id, { progressText: `Converting: ${pct}%` } as Partial<VideoNodeData>);
+          });
+        }
+
+        updateNodeData(props.id, { status: "uploading" } as Partial<VideoNodeData>);
+
         // Upload via presigned URL (bypasses Vercel 4.5MB body limit)
-        const url = await uploadFile(file);
+        const url = await uploadFile(uploadableFile);
 
         updateNodeData(props.id, {
           status: "complete",
