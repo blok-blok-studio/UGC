@@ -90,14 +90,27 @@ export default function TextToVideoNode(props: NodeProps) {
       if (KLING_MODELS.has(chosenModel)) {
         modelInputs.negative_prompt = "blur, distort, low quality, deformed hands, extra fingers";
         modelInputs.aspect_ratio = "16:9";
-        if (chosenModel === KLING_V3_IMAGE && imageUrls.length > 0) {
-          modelInputs.start_image_url = imageUrls[0];
-        } else if (chosenModel === KLING_V3_IMAGE && imageUrls.length === 0) {
+
+        if (chosenModel === KLING_V3_IMAGE && imageUrls.length === 0) {
           updateNodeData(props.id, {
             status: "error",
             error: "Kling v3 Image-to-Video needs at least 1 reference image",
           } as Partial<TextToVideoNodeData>);
           return;
+        }
+
+        if (imageUrls.length > 0) {
+          // First image is the start frame
+          modelInputs.start_image_url = imageUrls[0];
+        }
+
+        // Additional images become character/object elements for consistency
+        // Reference in prompt as @Element1, @Element2 (max 2 elements)
+        if (imageUrls.length >= 2) {
+          const elements = imageUrls.slice(1, 3).map((url) => ({
+            frontal_image_url: url,
+          }));
+          modelInputs.elements = elements;
         }
       }
       // Seedance 1.0 reference-to-video uses reference_image_urls (array)
@@ -224,7 +237,6 @@ export default function TextToVideoNode(props: NodeProps) {
 }
 
 function autoSelectModel(imageCount: number): string {
-  if (imageCount >= 2) return SEEDANCE_REF_MODEL;  // multi-image only on Seedance v1
-  if (imageCount === 1) return KLING_V3_IMAGE;      // Kling 3.0 Pro (best quality)
-  return KLING_V3_TEXT;                              // Kling 3.0 Pro text-only
+  if (imageCount >= 1) return KLING_V3_IMAGE;  // Kling 3.0 Pro: 1st image = start frame, extras = elements
+  return KLING_V3_TEXT;                         // Kling 3.0 Pro text-only
 }
