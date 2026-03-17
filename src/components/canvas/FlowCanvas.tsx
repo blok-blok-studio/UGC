@@ -25,6 +25,7 @@ import CharacterSwapNode from "@/components/nodes/CharacterSwapNode";
 import TextToVideoNode from "@/components/nodes/TextToVideoNode";
 import ProductPlacementNode from "@/components/nodes/ProductPlacementNode";
 import BackgroundNode from "@/components/nodes/BackgroundNode";
+import VideoExtendNode from "@/components/nodes/VideoExtendNode";
 import CompositeNode from "@/components/nodes/CompositeNode";
 import OutputNode from "@/components/nodes/OutputNode";
 import CustomEdge from "./CustomEdge";
@@ -38,6 +39,7 @@ const nodeTypes: NodeTypes = {
   faceSwapNode: FaceSwapNode,
   characterSwapNode: CharacterSwapNode,
   textToVideoNode: TextToVideoNode,
+  videoExtendNode: VideoExtendNode,
   productPlacementNode: ProductPlacementNode,
   backgroundNode: BackgroundNode,
   compositeNode: CompositeNode,
@@ -82,6 +84,12 @@ const DEFAULT_NODE_DATA: Record<string, () => any> = {
     label: "Text to Video",
     category: "processor",
     status: "idle",
+  }),
+  videoExtendNode: () => ({
+    label: "Video Extend",
+    category: "processor",
+    status: "idle",
+    extendDuration: 7,
   }),
   productPlacementNode: () => ({
     label: "Product Placement",

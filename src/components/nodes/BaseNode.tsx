@@ -33,6 +33,7 @@ const HANDLE_LABELS: Record<string, string> = {
   greenscreen_video: "GS Video",
   media: "Media",
   audio: "Audio",
+  source_video: "Source Video",
 };
 
 interface BaseNodeProps extends Omit<NodeProps, "data"> {

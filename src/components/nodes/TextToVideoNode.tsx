@@ -14,15 +14,23 @@ import type { TextToVideoNodeData, PromptNodeData } from "@/types";
 
 const MODEL_OPTIONS = NODE_MODEL_OPTIONS.textToVideoNode;
 
-// Seedance 1.5 Pro models (with audio)
+// Kling 3.0 Pro models
+const KLING_V3_IMAGE = "fal-ai/kling-video/v3/pro/image-to-video";
+const KLING_V3_TEXT = "fal-ai/kling-video/v3/pro/text-to-video";
+// Seedance 1.5 Pro models
 const SEEDANCE_15_IMAGE = "fal-ai/bytedance/seedance/v1.5/pro/image-to-video";
 const SEEDANCE_15_TEXT = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
-// Seedance 1.0 models (no audio)
+// Seedance 1.0 multi-image
 const SEEDANCE_REF_MODEL = "fal-ai/bytedance/seedance/v1/lite/reference-to-video";
-const SEEDANCE_PRO_MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
+
+// Kling v3 uses start_image_url instead of image_url
+const KLING_MODELS = new Set([KLING_V3_IMAGE, KLING_V3_TEXT]);
 
 // Models that support generate_audio
-const AUDIO_CAPABLE_MODELS = new Set([SEEDANCE_15_IMAGE, SEEDANCE_15_TEXT]);
+const AUDIO_CAPABLE_MODELS = new Set([
+  KLING_V3_IMAGE, KLING_V3_TEXT,
+  SEEDANCE_15_IMAGE, SEEDANCE_15_TEXT,
+]);
 
 export default function TextToVideoNode(props: NodeProps) {
   const data = props.data as unknown as TextToVideoNodeData;
@@ -39,7 +47,7 @@ export default function TextToVideoNode(props: NodeProps) {
     const promptNode = Object.values(inputs).find((n) => n.type === "promptNode");
     const promptData = promptNode?.data as unknown as PromptNodeData | undefined;
 
-    // Find ALL connected image nodes (support multiple for Seedance)
+    // Find ALL connected image nodes
     const imageNodes = Object.values(inputs).filter(
       (n) => n.type === "imageNode" || n.type === "productNode"
     );
@@ -66,22 +74,34 @@ export default function TextToVideoNode(props: NodeProps) {
     updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Generating video..." } as Partial<TextToVideoNodeData>);
 
     try {
-      // Auto-select model based on images and user selection
       const chosenModel = selectedModel || autoSelectModel(imageUrls.length);
 
       const modelInputs: Record<string, unknown> = {
         prompt: fullPrompt,
         duration: String(promptData.duration || 5),
-        resolution,
       };
 
-      // Add audio generation for 1.5 models
+      // Audio for capable models
       if (AUDIO_CAPABLE_MODELS.has(chosenModel)) {
         modelInputs.generate_audio = generateAudio;
       }
 
+      // Kling v3 models
+      if (KLING_MODELS.has(chosenModel)) {
+        modelInputs.negative_prompt = "blur, distort, low quality, deformed hands, extra fingers";
+        modelInputs.aspect_ratio = "16:9";
+        if (chosenModel === KLING_V3_IMAGE && imageUrls.length > 0) {
+          modelInputs.start_image_url = imageUrls[0];
+        } else if (chosenModel === KLING_V3_IMAGE && imageUrls.length === 0) {
+          updateNodeData(props.id, {
+            status: "error",
+            error: "Kling v3 Image-to-Video needs at least 1 reference image",
+          } as Partial<TextToVideoNodeData>);
+          return;
+        }
+      }
       // Seedance 1.0 reference-to-video uses reference_image_urls (array)
-      if (chosenModel === SEEDANCE_REF_MODEL) {
+      else if (chosenModel === SEEDANCE_REF_MODEL) {
         if (imageUrls.length === 0) {
           updateNodeData(props.id, {
             status: "error",
@@ -91,8 +111,8 @@ export default function TextToVideoNode(props: NodeProps) {
         }
         modelInputs.reference_image_urls = imageUrls.slice(0, 4);
       }
-      // Seedance 1.5 and 1.0 Pro use image_url (single)
-      else if (chosenModel === SEEDANCE_15_IMAGE || chosenModel === SEEDANCE_PRO_MODEL) {
+      // Seedance 1.5 Pro uses image_url
+      else if (chosenModel === SEEDANCE_15_IMAGE) {
         if (imageUrls.length === 0) {
           updateNodeData(props.id, {
             status: "error",
@@ -101,6 +121,11 @@ export default function TextToVideoNode(props: NodeProps) {
           return;
         }
         modelInputs.image_url = imageUrls[0];
+        modelInputs.resolution = resolution;
+      }
+      // Seedance 1.5 text-only
+      else if (chosenModel === SEEDANCE_15_TEXT) {
+        modelInputs.resolution = resolution;
       }
 
       const result = await generate(
@@ -144,24 +169,26 @@ export default function TextToVideoNode(props: NodeProps) {
           onChange={(id) => updateNodeData(props.id, { selectedModel: id } as Partial<TextToVideoNodeData>)}
         />
 
-        {/* Resolution picker */}
-        <div className="flex gap-1">
-          {(["480p", "720p", "1080p"] as const).map((res) => (
-            <button
-              key={res}
-              onClick={() => updateNodeData(props.id, { resolution: res } as Partial<TextToVideoNodeData>)}
-              className={`text-[10px] px-2 py-0.5 rounded border flex-1 transition-colors ${
-                resolution === res
-                  ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
-                  : "border-canvas-border text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {res}
-            </button>
-          ))}
-        </div>
+        {/* Resolution picker (Seedance only — Kling uses aspect_ratio) */}
+        {!KLING_MODELS.has(currentModel) && (
+          <div className="flex gap-1">
+            {(["480p", "720p", "1080p"] as const).map((res) => (
+              <button
+                key={res}
+                onClick={() => updateNodeData(props.id, { resolution: res } as Partial<TextToVideoNodeData>)}
+                className={`text-[10px] px-2 py-0.5 rounded border flex-1 transition-colors ${
+                  resolution === res
+                    ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
+                    : "border-canvas-border text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {res}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Audio toggle (only for 1.5 models) */}
+        {/* Audio toggle */}
         {isAudioCapable && (
           <button
             onClick={() => updateNodeData(props.id, { generateAudio: !generateAudio } as Partial<TextToVideoNodeData>)}
@@ -197,7 +224,7 @@ export default function TextToVideoNode(props: NodeProps) {
 }
 
 function autoSelectModel(imageCount: number): string {
-  if (imageCount >= 2) return SEEDANCE_REF_MODEL; // multi-image only on v1
-  if (imageCount === 1) return SEEDANCE_15_IMAGE;  // 1.5 Pro with audio
-  return SEEDANCE_15_TEXT;                          // 1.5 Pro text-only with audio
+  if (imageCount >= 2) return SEEDANCE_REF_MODEL;  // multi-image only on Seedance v1
+  if (imageCount === 1) return KLING_V3_IMAGE;      // Kling 3.0 Pro (best quality)
+  return KLING_V3_TEXT;                              // Kling 3.0 Pro text-only
 }

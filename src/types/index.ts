@@ -88,6 +88,15 @@ export interface BackgroundNodeData extends BaseNodeData {
   backgroundPrompt?: string;
 }
 
+export interface VideoExtendNodeData extends BaseNodeData {
+  category: "processor";
+  resultUrl?: string;
+  progressText?: string;
+  selectedModel?: string;
+  extendDuration?: number;
+  generateAudio?: boolean;
+}
+
 export interface CompositeNodeData extends BaseNodeData {
   category: "processor";
   resultUrl?: string;
@@ -110,6 +119,7 @@ export type AppNodeData =
   | FaceSwapNodeData
   | CharacterSwapNodeData
   | TextToVideoNodeData
+  | VideoExtendNodeData
   | ProductPlacementNodeData
   | BackgroundNodeData
   | CompositeNodeData

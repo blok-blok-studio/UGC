@@ -16,6 +16,9 @@ const ALLOWED_MODELS = new Set([
   "fal-ai/bytedance/seedance/v1/pro/image-to-video",
   "fal-ai/bytedance/seedance/v1.5/pro/image-to-video",
   "fal-ai/bytedance/seedance/v1.5/pro/text-to-video",
+  "fal-ai/veo3.1/fast/extend-video",
+  "fal-ai/veo3.1/extend-video",
+  "fal-ai/ltx-2.3/extend-video",
 ]);
 
 // Fast models that complete quickly (< 30s) - use subscribe

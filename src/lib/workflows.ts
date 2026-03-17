@@ -111,6 +111,31 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
       ],
       edges: [],
     },
+    {
+      label: "Extend Video",
+      description: "Video → Extend → Longer Video",
+      nodes: [
+        {
+          id: `videoNode-${ts()}`,
+          type: "videoNode",
+          position: { x: 50, y: 150 },
+          data: { label: "Source Video", category: "input", status: "idle" } as never,
+        },
+        {
+          id: `videoExtendNode-${ts()}`,
+          type: "videoExtendNode",
+          position: { x: 400, y: 150 },
+          data: { label: "Video Extend", category: "processor", status: "idle", extendDuration: 7 } as never,
+        },
+        {
+          id: `outputNode-${ts()}`,
+          type: "outputNode",
+          position: { x: 750, y: 150 },
+          data: { label: "Output", category: "output", status: "idle" } as never,
+        },
+      ],
+      edges: [],
+    },
   ];
 }
 
@@ -133,6 +158,10 @@ const WORKFLOW_EDGES: Record<string, [number, string, number, string][]> = {
     [1, "image", 3, "reference_image_2"], // Image 2 → TextToVideo
     [2, "prompt", 3, "prompt"],            // Prompt → TextToVideo
     [3, "video", 4, "media"],              // TextToVideo → Output
+  ],
+  "Extend Video": [
+    [0, "video", 1, "source_video"],       // Video → VideoExtend
+    [1, "video", 2, "media"],              // VideoExtend → Output
   ],
 };
 

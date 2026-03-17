@@ -77,10 +77,16 @@ export const NODE_MODEL_OPTIONS: Record<string, { id: string; name: string; cost
     { id: "fal-ai/kling-video/v2.6/pro/motion-control", name: "Kling v2.6 Pro", cost: "~$0.10/s" },
   ],
   textToVideoNode: [
-    { id: "fal-ai/bytedance/seedance/v1.5/pro/image-to-video", name: "Seedance 1.5 Pro + Audio (1 Image)", cost: "~$0.26/5s" },
-    { id: "fal-ai/bytedance/seedance/v1.5/pro/text-to-video", name: "Seedance 1.5 Pro + Audio (Text Only)", cost: "~$0.26/5s" },
-    { id: "fal-ai/bytedance/seedance/v1/lite/reference-to-video", name: "Seedance 1.0 Multi-Image (No Audio)", cost: "~$0.05/s" },
-    { id: "fal-ai/bytedance/seedance/v1/pro/image-to-video", name: "Seedance 1.0 Pro (No Audio)", cost: "~$0.08/s" },
+    { id: "fal-ai/kling-video/v3/pro/image-to-video", name: "Kling 3.0 Pro + Audio (1 Image)", cost: "~$0.17/s" },
+    { id: "fal-ai/kling-video/v3/pro/text-to-video", name: "Kling 3.0 Pro + Audio (Text Only)", cost: "~$0.17/s" },
+    { id: "fal-ai/bytedance/seedance/v1.5/pro/image-to-video", name: "Seedance 1.5 + Audio (1 Image)", cost: "~$0.26/5s" },
+    { id: "fal-ai/bytedance/seedance/v1.5/pro/text-to-video", name: "Seedance 1.5 + Audio (Text Only)", cost: "~$0.26/5s" },
+    { id: "fal-ai/bytedance/seedance/v1/lite/reference-to-video", name: "Seedance 1.0 Multi-Image", cost: "~$0.05/s" },
+  ],
+  videoExtendNode: [
+    { id: "fal-ai/veo3.1/fast/extend-video", name: "Veo 3.1 Fast + Audio", cost: "~$0.15/s" },
+    { id: "fal-ai/veo3.1/extend-video", name: "Veo 3.1 Standard + Audio", cost: "~$0.40/s" },
+    { id: "fal-ai/ltx-2.3/extend-video", name: "LTX-2.3 (Budget)", cost: "~$0.10/s" },
   ],
   productPlacementNode: [
     { id: "fal-ai/flux/schnell", name: "Flux Schnell", cost: "$0.003" },
@@ -195,6 +201,16 @@ export const NODE_PALETTE: PaletteItem[] = [
     icon: "Layers",
     inputs: ["source_media", "background_prompt"],
     outputs: ["image"],
+  },
+  {
+    type: "videoExtendNode",
+    label: "Video Extend",
+    category: "processor",
+    description: "Extend video duration seamlessly",
+    color: "#8b5cf6",
+    icon: "FastForward",
+    inputs: ["source_video", "prompt"],
+    outputs: ["video"],
   },
   {
     type: "compositeNode",
