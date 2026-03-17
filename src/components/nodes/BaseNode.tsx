@@ -56,10 +56,6 @@ export default function BaseNode({
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
-  // Calculate min-height so handles have enough vertical space
-  const handleCount = Math.max(inputs.length, outputs.length);
-  const minHeight = handleCount > 2 ? handleCount * 32 + 60 : undefined;
-
   return (
     <div
       className={`
@@ -68,7 +64,6 @@ export default function BaseNode({
         ${CATEGORY_STYLES[data.category]}
         ${selected ? "ring-2 ring-accent-primary border-accent-primary/50" : ""}
       `}
-      style={minHeight ? { minHeight } : undefined}
       onClick={() => setSelectedNode(id)}
     >
       {/* Header */}
@@ -113,7 +108,7 @@ export default function BaseNode({
         )}
       </div>
 
-      {/* Input handles with labels */}
+      {/* Input handles with outside labels */}
       {inputs.map((input, i) => {
         const topPct = ((i + 1) / (inputs.length + 1)) * 100;
         return (
@@ -128,12 +123,12 @@ export default function BaseNode({
                 borderColor: color,
               }}
             />
-            {/* Handle label */}
+            {/* Label positioned outside the node (to the left) */}
             <div
-              className="absolute pointer-events-none text-[9px] text-gray-500 whitespace-nowrap"
+              className="absolute pointer-events-none text-[9px] text-gray-400 whitespace-nowrap"
               style={{
                 top: `${topPct}%`,
-                left: 12,
+                right: "calc(100% + 10px)",
                 transform: "translateY(-50%)",
               }}
             >
@@ -143,7 +138,7 @@ export default function BaseNode({
         );
       })}
 
-      {/* Output handles with labels */}
+      {/* Output handles with outside labels */}
       {outputs.map((output, i) => {
         const topPct = ((i + 1) / (outputs.length + 1)) * 100;
         return (
@@ -158,12 +153,12 @@ export default function BaseNode({
                 borderColor: color,
               }}
             />
-            {/* Handle label */}
+            {/* Label positioned outside the node (to the right) */}
             <div
-              className="absolute pointer-events-none text-[9px] text-gray-500 whitespace-nowrap"
+              className="absolute pointer-events-none text-[9px] text-gray-400 whitespace-nowrap"
               style={{
                 top: `${topPct}%`,
-                right: 12,
+                left: "calc(100% + 10px)",
                 transform: "translateY(-50%)",
               }}
             >
