@@ -11,6 +11,8 @@ const ALLOWED_MODELS = new Set([
   "bria/video/background-removal",
   "fal-ai/bytedance/seedance/v1/lite/reference-to-video",
   "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+  "fal-ai/bytedance/seedance/v1.5/pro/image-to-video",
+  "fal-ai/bytedance/seedance/v1.5/pro/text-to-video",
 ]);
 
 export async function POST(request: NextRequest) {

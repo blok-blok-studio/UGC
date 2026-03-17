@@ -19,6 +19,7 @@ import ImageNode from "@/components/nodes/ImageNode";
 import VideoNode from "@/components/nodes/VideoNode";
 import ProductNode from "@/components/nodes/ProductNode";
 import PromptNode from "@/components/nodes/PromptNode";
+import AudioNode from "@/components/nodes/AudioNode";
 import FaceSwapNode from "@/components/nodes/FaceSwapNode";
 import CharacterSwapNode from "@/components/nodes/CharacterSwapNode";
 import TextToVideoNode from "@/components/nodes/TextToVideoNode";
@@ -33,6 +34,7 @@ const nodeTypes: NodeTypes = {
   videoNode: VideoNode,
   productNode: ProductNode,
   promptNode: PromptNode,
+  audioNode: AudioNode,
   faceSwapNode: FaceSwapNode,
   characterSwapNode: CharacterSwapNode,
   textToVideoNode: TextToVideoNode,
@@ -58,6 +60,11 @@ const DEFAULT_NODE_DATA: Record<string, () => any> = {
     prompt: "",
     angle: "front",
     duration: 5,
+  }),
+  audioNode: () => ({
+    label: "Audio",
+    category: "input",
+    status: "idle",
   }),
   faceSwapNode: () => ({
     label: "Face Swap",

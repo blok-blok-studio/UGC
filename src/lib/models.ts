@@ -77,10 +77,10 @@ export const NODE_MODEL_OPTIONS: Record<string, { id: string; name: string; cost
     { id: "fal-ai/kling-video/v2.6/pro/motion-control", name: "Kling v2.6 Pro", cost: "~$0.10/s" },
   ],
   textToVideoNode: [
-    { id: "fal-ai/bytedance/seedance/v1/lite/reference-to-video", name: "Seedance (Multi-Image)", cost: "~$0.05/s" },
-    { id: "fal-ai/bytedance/seedance/v1/pro/image-to-video", name: "Seedance Pro (1 Image)", cost: "~$0.08/s" },
-    { id: "fal-ai/kling-video/v3/pro/text-to-video", name: "Kling v3 (Text Only)", cost: "~$0.10/s" },
-    { id: "fal-ai/kling-video/v3/pro/image-to-video", name: "Kling v3 (1 Image)", cost: "~$0.10/s" },
+    { id: "fal-ai/bytedance/seedance/v1.5/pro/image-to-video", name: "Seedance 1.5 Pro + Audio (1 Image)", cost: "~$0.26/5s" },
+    { id: "fal-ai/bytedance/seedance/v1.5/pro/text-to-video", name: "Seedance 1.5 Pro + Audio (Text Only)", cost: "~$0.26/5s" },
+    { id: "fal-ai/bytedance/seedance/v1/lite/reference-to-video", name: "Seedance 1.0 Multi-Image (No Audio)", cost: "~$0.05/s" },
+    { id: "fal-ai/bytedance/seedance/v1/pro/image-to-video", name: "Seedance 1.0 Pro (No Audio)", cost: "~$0.08/s" },
   ],
   productPlacementNode: [
     { id: "fal-ai/flux/schnell", name: "Flux Schnell", cost: "$0.003" },
@@ -134,6 +134,16 @@ export const NODE_PALETTE: PaletteItem[] = [
     icon: "Type",
     inputs: [],
     outputs: ["prompt"],
+  },
+  {
+    type: "audioNode",
+    label: "Audio",
+    category: "input",
+    description: "Upload MP3/WAV audio",
+    color: "#f97316",
+    icon: "Music",
+    inputs: [],
+    outputs: ["audio"],
   },
   // Processor nodes
   {

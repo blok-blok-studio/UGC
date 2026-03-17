@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { type NodeProps } from "@xyflow/react";
-import { Wand2, Play } from "lucide-react";
+import { Wand2, Play, Volume2, VolumeX } from "lucide-react";
 import BaseNode from "./BaseNode";
 import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -14,15 +14,23 @@ import type { TextToVideoNodeData, PromptNodeData } from "@/types";
 
 const MODEL_OPTIONS = NODE_MODEL_OPTIONS.textToVideoNode;
 
-// Seedance reference-to-video supports 1-4 images
+// Seedance 1.5 Pro models (with audio)
+const SEEDANCE_15_IMAGE = "fal-ai/bytedance/seedance/v1.5/pro/image-to-video";
+const SEEDANCE_15_TEXT = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
+// Seedance 1.0 models (no audio)
 const SEEDANCE_REF_MODEL = "fal-ai/bytedance/seedance/v1/lite/reference-to-video";
 const SEEDANCE_PRO_MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
+
+// Models that support generate_audio
+const AUDIO_CAPABLE_MODELS = new Set([SEEDANCE_15_IMAGE, SEEDANCE_15_TEXT]);
 
 export default function TextToVideoNode(props: NodeProps) {
   const data = props.data as unknown as TextToVideoNodeData;
   const { updateNodeData, getConnectedInputs, setPreview } = useWorkflowStore();
 
   const selectedModel = (data as Record<string, unknown>).selectedModel as string | undefined;
+  const generateAudio = data.generateAudio !== false; // default true
+  const resolution = data.resolution || "720p";
 
   const handleGenerate = useCallback(async () => {
     const inputs = getConnectedInputs(props.id);
@@ -63,10 +71,16 @@ export default function TextToVideoNode(props: NodeProps) {
 
       const modelInputs: Record<string, unknown> = {
         prompt: fullPrompt,
-        duration: promptData.duration || 5,
+        duration: String(promptData.duration || 5),
+        resolution,
       };
 
-      // Seedance reference-to-video uses reference_image_urls (array)
+      // Add audio generation for 1.5 models
+      if (AUDIO_CAPABLE_MODELS.has(chosenModel)) {
+        modelInputs.generate_audio = generateAudio;
+      }
+
+      // Seedance 1.0 reference-to-video uses reference_image_urls (array)
       if (chosenModel === SEEDANCE_REF_MODEL) {
         if (imageUrls.length === 0) {
           updateNodeData(props.id, {
@@ -75,10 +89,17 @@ export default function TextToVideoNode(props: NodeProps) {
           } as Partial<TextToVideoNodeData>);
           return;
         }
-        modelInputs.reference_image_urls = imageUrls.slice(0, 4); // max 4
+        modelInputs.reference_image_urls = imageUrls.slice(0, 4);
       }
-      // Seedance Pro and Kling use image_url (single)
-      else if (imageUrls.length > 0) {
+      // Seedance 1.5 and 1.0 Pro use image_url (single)
+      else if (chosenModel === SEEDANCE_15_IMAGE || chosenModel === SEEDANCE_PRO_MODEL) {
+        if (imageUrls.length === 0) {
+          updateNodeData(props.id, {
+            status: "error",
+            error: "This model needs at least 1 reference image",
+          } as Partial<TextToVideoNodeData>);
+          return;
+        }
         modelInputs.image_url = imageUrls[0];
       }
 
@@ -102,7 +123,10 @@ export default function TextToVideoNode(props: NodeProps) {
         progressText: undefined,
       } as Partial<TextToVideoNodeData>);
     }
-  }, [props.id, data, selectedModel, updateNodeData, getConnectedInputs, setPreview]);
+  }, [props.id, data, selectedModel, generateAudio, resolution, updateNodeData, getConnectedInputs, setPreview]);
+
+  const currentModel = selectedModel || MODEL_OPTIONS[0].id;
+  const isAudioCapable = AUDIO_CAPABLE_MODELS.has(currentModel);
 
   return (
     <BaseNode
@@ -114,15 +138,43 @@ export default function TextToVideoNode(props: NodeProps) {
       outputs={["video"]}
     >
       <div className="space-y-2">
-        <p className="text-[10px] text-gray-500">
-          Prompt + up to 4 reference images → Video
-        </p>
-
         <ModelSelector
           models={MODEL_OPTIONS}
-          selected={selectedModel || MODEL_OPTIONS[0].id}
+          selected={currentModel}
           onChange={(id) => updateNodeData(props.id, { selectedModel: id } as Partial<TextToVideoNodeData>)}
         />
+
+        {/* Resolution picker */}
+        <div className="flex gap-1">
+          {(["480p", "720p", "1080p"] as const).map((res) => (
+            <button
+              key={res}
+              onClick={() => updateNodeData(props.id, { resolution: res } as Partial<TextToVideoNodeData>)}
+              className={`text-[10px] px-2 py-0.5 rounded border flex-1 transition-colors ${
+                resolution === res
+                  ? "bg-pink-500/20 border-pink-500/50 text-pink-400"
+                  : "border-canvas-border text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              {res}
+            </button>
+          ))}
+        </div>
+
+        {/* Audio toggle (only for 1.5 models) */}
+        {isAudioCapable && (
+          <button
+            onClick={() => updateNodeData(props.id, { generateAudio: !generateAudio } as Partial<TextToVideoNodeData>)}
+            className={`w-full flex items-center justify-center gap-1.5 rounded-md px-3 py-1 text-[10px] border transition-colors ${
+              generateAudio
+                ? "bg-orange-500/20 border-orange-500/40 text-orange-400"
+                : "bg-canvas-bg border-canvas-border text-gray-500"
+            }`}
+          >
+            {generateAudio ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+            {generateAudio ? "Audio ON" : "Audio OFF"}
+          </button>
+        )}
 
         {data.status !== "processing" && (
           <button
@@ -145,7 +197,7 @@ export default function TextToVideoNode(props: NodeProps) {
 }
 
 function autoSelectModel(imageCount: number): string {
-  if (imageCount >= 2) return SEEDANCE_REF_MODEL;
-  if (imageCount === 1) return SEEDANCE_PRO_MODEL;
-  return "fal-ai/kling-video/v3/pro/text-to-video"; // text only fallback
+  if (imageCount >= 2) return SEEDANCE_REF_MODEL; // multi-image only on v1
+  if (imageCount === 1) return SEEDANCE_15_IMAGE;  // 1.5 Pro with audio
+  return SEEDANCE_15_TEXT;                          // 1.5 Pro text-only with audio
 }

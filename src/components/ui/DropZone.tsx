@@ -6,7 +6,7 @@ import { Upload, AlertCircle } from "lucide-react";
 import { formatFileSize } from "@/lib/file-utils";
 
 interface DropZoneProps {
-  accept: "image" | "video" | "both";
+  accept: "image" | "video" | "audio" | "both";
   onFile: (file: File) => void;
   compact?: boolean;
   disabled?: boolean;
@@ -15,13 +15,14 @@ interface DropZoneProps {
 const ACCEPT_MAP = {
   image: { "image/jpeg": [], "image/png": [], "image/webp": [], "image/gif": [] },
   video: { "video/mp4": [], "video/webm": [], "video/quicktime": [] },
+  audio: { "audio/mpeg": [], "audio/wav": [], "audio/ogg": [], "audio/aac": [], "audio/mp4": [] },
   both: {
     "image/jpeg": [], "image/png": [], "image/webp": [], "image/gif": [],
     "video/mp4": [], "video/webm": [], "video/quicktime": [],
   },
 };
 
-const MAX_SIZES = { image: 10 * 1024 * 1024, video: 50 * 1024 * 1024 };
+const MAX_SIZES = { image: 10 * 1024 * 1024, video: 50 * 1024 * 1024, audio: 25 * 1024 * 1024 };
 
 export default function DropZone({ accept, onFile, compact, disabled }: DropZoneProps) {
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +38,8 @@ export default function DropZone({ accept, onFile, compact, disabled }: DropZone
         const file = acceptedFiles[0];
         const maxSize = file.type.startsWith("video/")
           ? MAX_SIZES.video
+          : file.type.startsWith("audio/")
+          ? MAX_SIZES.audio
           : MAX_SIZES.image;
         if (file.size > maxSize) {
           setError(`File too large. Max: ${formatFileSize(maxSize)}`);

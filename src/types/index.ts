@@ -60,12 +60,21 @@ export interface CharacterSwapNodeData extends BaseNodeData {
   progressText?: string;
 }
 
+export interface AudioNodeData extends BaseNodeData {
+  category: "input";
+  fileUrl?: string;
+  fileName?: string;
+  thumbnailUrl?: string;
+}
+
 export interface TextToVideoNodeData extends BaseNodeData {
   category: "processor";
   resultUrl?: string;
   duration?: number;
   progressText?: string;
   selectedModel?: string;
+  generateAudio?: boolean;
+  resolution?: "480p" | "720p" | "1080p";
 }
 
 export interface ProductPlacementNodeData extends BaseNodeData {
@@ -97,6 +106,7 @@ export type AppNodeData =
   | VideoNodeData
   | ProductNodeData
   | PromptNodeData
+  | AudioNodeData
   | FaceSwapNodeData
   | CharacterSwapNodeData
   | TextToVideoNodeData
@@ -167,6 +177,17 @@ export const ALLOWED_VIDEO_TYPES = [
   "video/webm",
   "video/quicktime",
 ] as const;
+
+export const ALLOWED_AUDIO_TYPES = [
+  "audio/mpeg",
+  "audio/wav",
+  "audio/mp3",
+  "audio/ogg",
+  "audio/aac",
+  "audio/m4a",
+] as const;
+
+export const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25MB
 
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
