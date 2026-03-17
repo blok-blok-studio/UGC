@@ -77,8 +77,10 @@ export const NODE_MODEL_OPTIONS: Record<string, { id: string; name: string; cost
     { id: "fal-ai/kling-video/v2.6/pro/motion-control", name: "Kling v2.6 Pro", cost: "~$0.10/s" },
   ],
   textToVideoNode: [
-    { id: "fal-ai/kling-video/v3/pro/text-to-video", name: "Kling v3 Pro (Text)", cost: "~$0.10/s" },
-    { id: "fal-ai/kling-video/v3/pro/image-to-video", name: "Kling v3 Pro (Image)", cost: "~$0.10/s" },
+    { id: "fal-ai/bytedance/seedance/v1/lite/reference-to-video", name: "Seedance (Multi-Image)", cost: "~$0.05/s" },
+    { id: "fal-ai/bytedance/seedance/v1/pro/image-to-video", name: "Seedance Pro (1 Image)", cost: "~$0.08/s" },
+    { id: "fal-ai/kling-video/v3/pro/text-to-video", name: "Kling v3 (Text Only)", cost: "~$0.10/s" },
+    { id: "fal-ai/kling-video/v3/pro/image-to-video", name: "Kling v3 (1 Image)", cost: "~$0.10/s" },
   ],
   productPlacementNode: [
     { id: "fal-ai/flux/schnell", name: "Flux Schnell", cost: "$0.003" },
@@ -158,10 +160,10 @@ export const NODE_PALETTE: PaletteItem[] = [
     type: "textToVideoNode",
     label: "Text to Video",
     category: "processor",
-    description: "Generate video from prompt",
+    description: "Prompt + up to 4 images → Video",
     color: "#ec4899",
     icon: "Wand2",
-    inputs: ["prompt", "reference_image"],
+    inputs: ["prompt", "reference_image_1", "reference_image_2", "reference_image_3", "reference_image_4"],
     outputs: ["video"],
   },
   {

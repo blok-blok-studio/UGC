@@ -12,6 +12,8 @@ const ALLOWED_MODELS = new Set([
   "fal-ai/bria/rmbg/v2",
   "fal-ai/flux/schnell",
   "bria/video/background-removal",
+  "fal-ai/bytedance/seedance/v1/lite/reference-to-video",
+  "fal-ai/bytedance/seedance/v1/pro/image-to-video",
 ]);
 
 // Fast models that complete quickly (< 30s) - use subscribe

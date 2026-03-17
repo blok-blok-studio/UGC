@@ -76,24 +76,36 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
     },
     {
       label: "Text to UGC",
-      description: "Prompt → Video",
+      description: "Prompt + Images → Video",
       nodes: [
+        {
+          id: `imageNode-1-${ts()}`,
+          type: "imageNode",
+          position: { x: 50, y: 50 },
+          data: { label: "Reference 1 (You)", category: "input", status: "idle" } as never,
+        },
+        {
+          id: `imageNode-2-${ts()}`,
+          type: "imageNode",
+          position: { x: 50, y: 250 },
+          data: { label: "Reference 2 (Style)", category: "input", status: "idle" } as never,
+        },
         {
           id: `promptNode-${ts()}`,
           type: "promptNode",
-          position: { x: 50, y: 100 },
+          position: { x: 50, y: 450 },
           data: { label: "Prompt", category: "input", status: "idle", prompt: "", angle: "front", duration: 5 } as never,
         },
         {
           id: `textToVideoNode-${ts()}`,
           type: "textToVideoNode",
-          position: { x: 400, y: 100 },
+          position: { x: 450, y: 200 },
           data: { label: "Text to Video", category: "processor", status: "idle" } as never,
         },
         {
           id: `outputNode-${ts()}`,
           type: "outputNode",
-          position: { x: 750, y: 100 },
+          position: { x: 800, y: 200 },
           data: { label: "Output", category: "output", status: "idle" } as never,
         },
       ],
@@ -103,48 +115,41 @@ export function getWorkflowTemplates(): WorkflowTemplate[] {
 }
 
 // Edge wiring definitions for each workflow template.
-// Maps: [sourceNodeType, sourceHandle, targetNodeType, targetHandle]
-const WORKFLOW_WIRING: Record<string, [string, string, string, string][]> = {
+// Maps: [sourceNodeIndex, sourceHandle, targetNodeIndex, targetHandle]
+// Uses node index (position in the nodes array) to support duplicate node types.
+const WORKFLOW_EDGES: Record<string, [number, string, number, string][]> = {
   "Product Hold": [
-    ["imageNode", "image", "productPlacementNode", "person_image"],
-    ["productNode", "image", "productPlacementNode", "product_image"],
-    ["productPlacementNode", "image", "outputNode", "media"],
+    [0, "image", 2, "person_image"],   // Image → ProductPlacement
+    [1, "image", 2, "product_image"],   // Product → ProductPlacement
+    [2, "image", 3, "media"],           // ProductPlacement → Output
   ],
   "Character Swap": [
-    ["videoNode", "video", "characterSwapNode", "reference_video"],
-    ["imageNode", "image", "characterSwapNode", "character_image"],
-    ["characterSwapNode", "video", "outputNode", "media"],
+    [0, "video", 2, "reference_video"], // Video → CharacterSwap
+    [1, "image", 2, "character_image"], // Image → CharacterSwap
+    [2, "video", 3, "media"],           // CharacterSwap → Output
   ],
   "Text to UGC": [
-    ["promptNode", "prompt", "textToVideoNode", "prompt"],
-    ["textToVideoNode", "video", "outputNode", "media"],
+    [0, "image", 3, "reference_image_1"], // Image 1 → TextToVideo
+    [1, "image", 3, "reference_image_2"], // Image 2 → TextToVideo
+    [2, "prompt", 3, "prompt"],            // Prompt → TextToVideo
+    [3, "video", 4, "media"],              // TextToVideo → Output
   ],
 };
 
 export function createWorkflow(template: WorkflowTemplate): { nodes: AppNode[]; edges: Edge[] } {
-  // Generate fresh IDs to avoid conflicts
-  const idMap: Record<string, string> = {};
   const now = Date.now();
 
-  const nodes = template.nodes.map((node, i) => {
-    const newId = `${node.type}-${now + i}`;
-    idMap[node.id] = newId;
-    return { ...node, id: newId };
-  });
+  const nodes = template.nodes.map((node, i) => ({
+    ...node,
+    id: `${node.type}-${now + i}`,
+  }));
 
-  // Build a lookup: nodeType → newId
-  // For Character Swap workflow, videoNode appears once but connects to two targets
-  const typeToId: Record<string, string> = {};
-  for (const node of nodes) {
-    typeToId[node.type!] = node.id;
-  }
-
-  const wiring = WORKFLOW_WIRING[template.label] || [];
-  const edges: Edge[] = wiring.map(([srcType, srcHandle, tgtType, tgtHandle]) => ({
-    id: `e-${typeToId[srcType]}-${srcHandle}-${typeToId[tgtType]}-${tgtHandle}`,
-    source: typeToId[srcType],
+  const wiring = WORKFLOW_EDGES[template.label] || [];
+  const edges: Edge[] = wiring.map(([srcIdx, srcHandle, tgtIdx, tgtHandle]) => ({
+    id: `e-${nodes[srcIdx].id}-${srcHandle}-${nodes[tgtIdx].id}-${tgtHandle}`,
+    source: nodes[srcIdx].id,
     sourceHandle: srcHandle,
-    target: typeToId[tgtType],
+    target: nodes[tgtIdx].id,
     targetHandle: tgtHandle,
     animated: false,
     type: "custom",

@@ -64,6 +64,8 @@ export interface TextToVideoNodeData extends BaseNodeData {
   category: "processor";
   resultUrl?: string;
   duration?: number;
+  progressText?: string;
+  selectedModel?: string;
 }
 
 export interface ProductPlacementNodeData extends BaseNodeData {
