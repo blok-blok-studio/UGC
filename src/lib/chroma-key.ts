@@ -190,16 +190,38 @@ function renderCompositeFrame(
   const pixels = imageData.data;
 
   // Chroma key: make green pixels transparent
+  // Bria outputs pure green (#00FF00) but video compression creates many shades
   for (let i = 0; i < pixels.length; i += 4) {
     const r = pixels[i];
     const g = pixels[i + 1];
     const b = pixels[i + 2];
 
-    if (g > 120 && r < 150 && b < 150 && g > r * 1.2 && g > b * 1.2) {
+    // Convert to HSV-like green detection for better accuracy
+    const maxC = Math.max(r, g, b);
+    const minC = Math.min(r, g, b);
+    const delta = maxC - minC;
+
+    // Check if green is dominant channel
+    if (g === maxC && delta > 20) {
+      // Calculate how "green" this pixel is (0-1)
+      // Hue check: is it in the green range?
+      const hue = 60 * (((b - r) / delta) + 2); // simplified hue for green
+      const saturation = delta / (maxC || 1);
+      const greenness = saturation * (g / 255);
+
+      if (hue > 60 && hue < 180 && saturation > 0.2 && g > 80) {
+        // Strong green — fully transparent
+        if (greenness > 0.4) {
+          pixels[i + 3] = 0;
+        } else {
+          // Edge/spill — partial transparency
+          pixels[i + 3] = Math.round(255 * (1 - greenness * 2));
+        }
+      }
+    }
+    // Also catch near-pure greens that compression might produce
+    else if (g > 100 && g > r * 1.4 && g > b * 1.4) {
       pixels[i + 3] = 0;
-    } else if (g > 100 && r < 180 && b < 180 && g > r && g > b) {
-      const greenness = (g - Math.max(r, b)) / g;
-      pixels[i + 3] = Math.round(255 * (1 - greenness));
     }
   }
 
