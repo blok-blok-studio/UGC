@@ -12,6 +12,28 @@ const CATEGORY_STYLES: Record<NodeCategory, string> = {
   output: "border-cyan-500/30 shadow-cyan-500/10",
 };
 
+/** Short display labels for handle IDs */
+const HANDLE_LABELS: Record<string, string> = {
+  prompt: "Prompt",
+  image: "Image",
+  video: "Video",
+  source_face: "Source Face",
+  target_image: "Target Image",
+  reference_video: "Ref Video",
+  character_image: "Character",
+  reference_image_1: "Ref Image 1",
+  reference_image_2: "Ref Image 2",
+  reference_image_3: "Ref Image 3",
+  reference_image_4: "Ref Image 4",
+  person_image: "Person",
+  product_image: "Product",
+  source_media: "Source",
+  background_prompt: "BG Prompt",
+  background_video: "BG Video",
+  greenscreen_video: "GS Video",
+  media: "Media",
+};
+
 interface BaseNodeProps extends Omit<NodeProps, "data"> {
   data: BaseNodeData;
   color: string;
@@ -34,14 +56,19 @@ export default function BaseNode({
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
+  // Calculate min-height so handles have enough vertical space
+  const handleCount = Math.max(inputs.length, outputs.length);
+  const minHeight = handleCount > 2 ? handleCount * 32 + 60 : undefined;
+
   return (
     <div
       className={`
-        bg-canvas-surface border rounded-xl shadow-lg min-w-[200px] max-w-[260px]
+        relative bg-canvas-surface border rounded-xl shadow-lg min-w-[200px] max-w-[260px]
         transition-all duration-200
         ${CATEGORY_STYLES[data.category]}
         ${selected ? "ring-2 ring-accent-primary border-accent-primary/50" : ""}
       `}
+      style={minHeight ? { minHeight } : undefined}
       onClick={() => setSelectedNode(id)}
     >
       {/* Header */}
@@ -86,35 +113,65 @@ export default function BaseNode({
         )}
       </div>
 
-      {/* Input handles */}
-      {inputs.map((input, i) => (
-        <Handle
-          key={`input-${input}`}
-          type="target"
-          position={Position.Left}
-          id={input}
-          className="!w-3 !h-3 !bg-canvas-border !border-2 hover:!bg-accent-primary transition-colors"
-          style={{
-            top: `${((i + 1) / (inputs.length + 1)) * 100}%`,
-            borderColor: color,
-          }}
-        />
-      ))}
+      {/* Input handles with labels */}
+      {inputs.map((input, i) => {
+        const topPct = ((i + 1) / (inputs.length + 1)) * 100;
+        return (
+          <div key={`input-${input}`}>
+            <Handle
+              type="target"
+              position={Position.Left}
+              id={input}
+              className="!w-3 !h-3 !bg-canvas-border !border-2 hover:!bg-accent-primary transition-colors"
+              style={{
+                top: `${topPct}%`,
+                borderColor: color,
+              }}
+            />
+            {/* Handle label */}
+            <div
+              className="absolute pointer-events-none text-[9px] text-gray-500 whitespace-nowrap"
+              style={{
+                top: `${topPct}%`,
+                left: 12,
+                transform: "translateY(-50%)",
+              }}
+            >
+              {HANDLE_LABELS[input] || input}
+            </div>
+          </div>
+        );
+      })}
 
-      {/* Output handles */}
-      {outputs.map((output, i) => (
-        <Handle
-          key={`output-${output}`}
-          type="source"
-          position={Position.Right}
-          id={output}
-          className="!w-3 !h-3 !bg-canvas-border !border-2 hover:!bg-accent-primary transition-colors"
-          style={{
-            top: `${((i + 1) / (outputs.length + 1)) * 100}%`,
-            borderColor: color,
-          }}
-        />
-      ))}
+      {/* Output handles with labels */}
+      {outputs.map((output, i) => {
+        const topPct = ((i + 1) / (outputs.length + 1)) * 100;
+        return (
+          <div key={`output-${output}`}>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={output}
+              className="!w-3 !h-3 !bg-canvas-border !border-2 hover:!bg-accent-primary transition-colors"
+              style={{
+                top: `${topPct}%`,
+                borderColor: color,
+              }}
+            />
+            {/* Handle label */}
+            <div
+              className="absolute pointer-events-none text-[9px] text-gray-500 whitespace-nowrap"
+              style={{
+                top: `${topPct}%`,
+                right: 12,
+                transform: "translateY(-50%)",
+              }}
+            >
+              {HANDLE_LABELS[output] || output}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
