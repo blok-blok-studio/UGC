@@ -8,6 +8,8 @@ import MediaPreview from "@/components/ui/MediaPreview";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import { generate } from "@/lib/generate";
+import { chromaKeyComposite } from "@/lib/chroma-key";
+import { uploadFile } from "@/lib/upload";
 import type { CharacterSwapNodeData } from "@/types";
 
 export default function CharacterSwapNode(props: NodeProps) {
@@ -44,28 +46,24 @@ export default function CharacterSwapNode(props: NodeProps) {
       return;
     }
 
-    updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Step 1/2: Transferring motion..." } as Partial<CharacterSwapNodeData>);
+    updateNodeData(props.id, { status: "processing", error: undefined, progressText: "Step 1/3: Transferring motion..." } as Partial<CharacterSwapNodeData>);
 
     try {
       // ── Step 1: Motion transfer via Kling ──
-      const params: Record<string, unknown> = {
-        video_url: videoUrl,
-        image_url: imageUrl,
-        character_orientation: data.orientation || "video",
-      };
-      if (data.scenePrompt?.trim()) {
-        params.prompt = data.scenePrompt.trim();
-      }
-
+      // Character copies your movements (generates in character's scene)
       const motionResult = await generate(
         "fal-ai/kling-video/v2.6/pro/motion-control",
-        params,
+        {
+          video_url: videoUrl,
+          image_url: imageUrl,
+          character_orientation: "video",
+        },
         props.id,
-        (status) => updateNodeData(props.id, { progressText: `Step 1/2: ${status}` } as Partial<CharacterSwapNodeData>),
+        (status) => updateNodeData(props.id, { progressText: `Step 1/3: ${status}` } as Partial<CharacterSwapNodeData>),
       );
 
-      // ── Step 2: Background removal (always run — needed for composite) ──
-      updateNodeData(props.id, { progressText: "Step 2/2: Removing background..." } as Partial<CharacterSwapNodeData>);
+      // ── Step 2: Remove background → transparent video ──
+      updateNodeData(props.id, { progressText: "Step 2/3: Removing background..." } as Partial<CharacterSwapNodeData>);
 
       const bgResult = await generate(
         "bria/video/background-removal",
@@ -75,15 +73,28 @@ export default function CharacterSwapNode(props: NodeProps) {
           output_container_and_codec: "webm_vp9",
         },
         props.id,
-        (status) => updateNodeData(props.id, { progressText: `Step 2/2: ${status}` } as Partial<CharacterSwapNodeData>),
+        (status) => updateNodeData(props.id, { progressText: `Step 2/3: ${status}` } as Partial<CharacterSwapNodeData>),
       );
+
+      // ── Step 3: Composite character onto YOUR original video ──
+      updateNodeData(props.id, { progressText: "Step 3/3: Compositing onto your video..." } as Partial<CharacterSwapNodeData>);
+
+      const compositeFile = await chromaKeyComposite(
+        videoUrl,           // YOUR original video (background)
+        bgResult.resultUrl, // transparent character video (overlay)
+        (pct) => updateNodeData(props.id, { progressText: `Step 3/3: Compositing ${pct}%` } as Partial<CharacterSwapNodeData>),
+      );
+
+      // Upload the final composited video
+      updateNodeData(props.id, { progressText: "Uploading final video..." } as Partial<CharacterSwapNodeData>);
+      const resultUrl = await uploadFile(compositeFile);
 
       updateNodeData(props.id, {
         status: "complete",
-        resultUrl: bgResult.resultUrl,
+        resultUrl,
         progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
-      setPreview(bgResult.resultUrl, "video");
+      setPreview(resultUrl, "video");
     } catch (err) {
       updateNodeData(props.id, {
         status: "error",
@@ -91,7 +102,7 @@ export default function CharacterSwapNode(props: NodeProps) {
         progressText: undefined,
       } as Partial<CharacterSwapNodeData>);
     }
-  }, [props.id, data.orientation, data.scenePrompt, updateNodeData, getConnectedInputs, setPreview]);
+  }, [props.id, updateNodeData, getConnectedInputs, setPreview]);
 
   return (
     <BaseNode
@@ -104,17 +115,8 @@ export default function CharacterSwapNode(props: NodeProps) {
     >
       <div className="space-y-2">
         <p className="text-[10px] text-gray-500">
-          Your movements → Character&apos;s body → Your background
+          Upload your video + character image → one click
         </p>
-
-        {/* Scene prompt */}
-        <textarea
-          value={data.scenePrompt || ""}
-          onChange={(e) => updateNodeData(props.id, { scenePrompt: e.target.value } as Partial<CharacterSwapNodeData>)}
-          placeholder="Optional: describe the scene style"
-          className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1 text-[10px] text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-pink-500/50"
-          rows={2}
-        />
 
         {data.status !== "processing" && (
           <button
