@@ -71,8 +71,8 @@ export default function CharacterSwapNode(props: NodeProps) {
         "bria/video/background-removal",
         {
           video_url: motionResult.resultUrl,
-          background_color: "Green",
-          output_container_and_codec: "mp4_h264",
+          background_color: "Transparent",
+          output_container_and_codec: "webm_vp9",
         },
         props.id,
         (status) => updateNodeData(props.id, { progressText: `Step 2/2: ${status}` } as Partial<CharacterSwapNodeData>),
